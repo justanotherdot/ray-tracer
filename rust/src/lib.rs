@@ -26,6 +26,24 @@ impl Point {
     }
 }
 
+impl std::cmp::PartialEq<Vector> for Point {
+    fn eq(&self, other: &Vector) -> bool {
+        naive_approx_equal_float(self.x, other.x)
+            && naive_approx_equal_float(self.y, other.y)
+            && naive_approx_equal_float(self.z, other.z)
+            && naive_approx_equal_float(self.w, other.w)
+    }
+}
+
+impl std::cmp::PartialEq<Point> for Vector {
+    fn eq(&self, other: &Point) -> bool {
+        naive_approx_equal_float(self.x, other.x)
+            && naive_approx_equal_float(self.y, other.y)
+            && naive_approx_equal_float(self.z, other.z)
+            && naive_approx_equal_float(self.w, other.w)
+    }
+}
+
 impl PartialEq for Point {
     fn eq(&self, other: &Self) -> bool {
         naive_approx_equal_float(self.x, other.x)
@@ -104,6 +122,45 @@ impl std::ops::Add for Vector {
     }
 }
 
+impl std::ops::Sub for Point {
+    type Output = Vector;
+
+    fn sub(self, rhs: Point) -> Self::Output {
+        Vector {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+            w: self.w - rhs.w,
+        }
+    }
+}
+
+impl std::ops::Sub<Vector> for Point {
+    type Output = Vector;
+
+    fn sub(self, rhs: Vector) -> Self::Output {
+        Vector {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+            w: self.w - rhs.w,
+        }
+    }
+}
+
+impl std::ops::Sub for Vector {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Vector {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+            w: self.w - rhs.w,
+        }
+    }
+}
+
 #[allow(dead_code)]
 fn naive_approx_equal_float(x: f64, y: f64) -> bool {
     const F64_EPSILON: f64 = 0.00001;
@@ -160,5 +217,32 @@ mod test {
     #[test]
     fn naive_approx_equal_float_works() {
         assert!(naive_approx_equal_float(0.15 + 0.15, 0.1 + 0.2));
+    }
+
+    #[test]
+    fn subtracting_two_points() {
+        let a1 = Point::new(3., 2., 1.);
+        let a2 = Point::new(5., 6., 7.);
+        let a3 = a1 - a2;
+
+        assert_eq!(&a3, &Vector::new(-2., -4., -6.));
+    }
+
+    #[test]
+    fn subtracting_a_vector_from_a_point() {
+        let a1 = Point::new(3., 2., 1.);
+        let a2 = Vector::new(5., 6., 7.);
+        let a3 = a1 - a2;
+
+        assert_eq!(&a3, &Point::new(-2., -4., -6.));
+    }
+
+    #[test]
+    fn subtracting_two_vectors() {
+        let a1 = Vector::new(3., 2., 1.);
+        let a2 = Vector::new(5., 6., 7.);
+        let a3 = a1 - a2;
+
+        assert_eq!(&a3, &Vector::new(-2., -4., -6.));
     }
 }
