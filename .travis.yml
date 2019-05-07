@@ -6,7 +6,7 @@ matrix:
   allow_failures:
     - rust: nightly
   fast_finish: true
-script: "cargo build --verbose; cargo test --verbose"
+script: "cd rust; cargo build --verbose; cargo test --verbose"
 branches:
   only:
     # This is where pull requests from "bors r+" are built.
