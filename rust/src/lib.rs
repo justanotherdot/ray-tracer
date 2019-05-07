@@ -161,7 +161,32 @@ impl std::ops::Sub for Vector {
     }
 }
 
-#[allow(dead_code)]
+impl std::ops::Neg for Point {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+            w: -self.w,
+        }
+    }
+}
+
+impl std::ops::Neg for Vector {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+            w: -self.w,
+        }
+    }
+}
+
 fn naive_approx_equal_float(x: f64, y: f64) -> bool {
     const F64_EPSILON: f64 = 0.00001;
     // TODO Needs checks for NaN and ±∞ etc.
@@ -244,5 +269,48 @@ mod test {
         let a3 = a1 - a2;
 
         assert_eq!(&a3, &Vector::new(-2., -4., -6.));
+    }
+
+    #[test]
+    fn subtracting_a_vector_from_the_zero_vector() {
+        let zero = Vector::new(0., 0., 0.);
+        let v1 = Vector::new(1., -2., 3.);
+        let v2 = zero - v1;
+
+        assert_eq!(&v2, &Vector::new(-1., 2., -3.));
+    }
+
+    #[test]
+    fn negating_a_point() {
+        let p = Point::new(1., -2., 3.);
+        // TODO It's worth considering if `new` on Point and Vector is worth it
+        // if we're doing things like this here.
+        let expected = Point {
+            x: -1.,
+            y: 2.,
+            z: -3.,
+            w: -1.,
+        };
+
+        // The test in the book shows w = 4 and represents this test with tuples but since we have
+        // two specific structs we simply show the negated Point.
+        assert_eq!(&(-p), &expected);
+    }
+
+    #[test]
+    fn negating_a_vector() {
+        let v = Vector::new(1., -2., 3.);
+        // TODO It's worth considering if `new` on Vector and Vector is worth it
+        // if we're doing things like this here.
+        let expected = Vector {
+            x: -1.,
+            y: 2.,
+            z: -3.,
+            w: -0.,
+        };
+
+        // The test in the book shows w = 4 and represents this test with tuples but since we have
+        // two specific structs we simply show the negated Point.
+        assert_eq!(&(-v), &expected);
     }
 }
