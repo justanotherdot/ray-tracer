@@ -174,6 +174,58 @@ impl std::ops::Neg for Point {
     }
 }
 
+impl std::ops::Mul<f64> for Vector {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Vector {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+            w: self.w * rhs,
+        }
+    }
+}
+
+impl std::ops::Mul<Vector> for f64 {
+    type Output = Vector;
+
+    fn mul(self, rhs: Vector) -> Self::Output {
+        Vector {
+            x: rhs.x * self,
+            y: rhs.y * self,
+            z: rhs.z * self,
+            w: rhs.w * self,
+        }
+    }
+}
+
+impl std::ops::Mul<f64> for Point {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Point {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+            w: self.w * rhs,
+        }
+    }
+}
+
+impl std::ops::Mul<Point> for f64 {
+    type Output = Point;
+
+    fn mul(self, rhs: Point) -> Self::Output {
+        Point {
+            x: rhs.x * self,
+            y: rhs.y * self,
+            z: rhs.z * self,
+            w: rhs.w * self,
+        }
+    }
+}
+
 impl std::ops::Neg for Vector {
     type Output = Self;
 
@@ -312,5 +364,119 @@ mod test {
         // The test in the book shows w = 4 and represents this test with tuples but since we have
         // two specific structs we simply show the negated Point.
         assert_eq!(&(-v), &expected);
+    }
+
+    #[test]
+    fn multiplying_a_vector_by_a_scalar() {
+        let v = Vector::new(1., -2., 3.);
+        let expected = Vector {
+            x: 3.5,
+            y: -7.,
+            z: 10.5,
+            w: 0.,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(v * 3.5), &expected);
+    }
+
+    #[test]
+    fn multiplying_a_vector_by_a_fraction() {
+        let v = Vector::new(1., -2., 3.);
+        let expected = Vector {
+            x: 0.5,
+            y: -1.,
+            z: 1.5,
+            w: 0.,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(v * 0.5), &expected);
+    }
+
+    #[test]
+    fn multiplying_a_vector_by_a_scalar_identity() {
+        let v = Vector::new(1., -2., 3.);
+        let expected = Vector {
+            x: 1.,
+            y: -2.,
+            z: 3.,
+            w: 0.,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(v * 1.), &expected);
+    }
+
+    #[test]
+    fn multiplying_a_point_by_a_scalar() {
+        let p = Point::new(1., -2., 3.);
+        let expected = Point {
+            x: 3.5,
+            y: -7.,
+            z: 10.5,
+            w: 3.5,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(p * 3.5), &expected);
+    }
+
+    #[test]
+    fn multiplying_a_point_by_a_fraction() {
+        let p = Point::new(1., -2., 3.);
+        let expected = Point {
+            x: 0.5,
+            y: -1.,
+            z: 1.5,
+            w: 0.5,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(p * 0.5), &expected);
+    }
+
+    #[test]
+    fn multiplying_a_point_by_a_scalar_identity() {
+        let p = Point::new(1., -2., 3.);
+        let expected = Point {
+            x: 3.5,
+            y: -7.,
+            z: 10.5,
+            w: 3.5,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(p * 3.5), &expected);
     }
 }
