@@ -62,6 +62,34 @@ pub struct Vector {
     w: f64,
 }
 
+fn magnitude(v: &Vector) -> f64 {
+    // TODO Ought this not include `w`?
+    let sum_of_squares = v.x.powf(2.) + v.y.powf(2.) + v.z.powf(2.) + v.w.powf(2.);
+    sum_of_squares.sqrt()
+}
+
+fn normalize(v: &Vector) -> Vector {
+    let mag = v.magnitude();
+    Vector {
+        x: v.x / mag,
+        y: v.y / mag,
+        z: v.z / mag,
+        w: v.w / mag,
+    }
+}
+
+fn dot(a: &Vector, b: &Vector) -> f64 {
+    a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w
+}
+
+fn cross(a: &Vector, b: &Vector) -> Vector {
+    Vector::new(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x,
+    )
+}
+
 #[allow(dead_code)]
 impl Vector {
     fn new(x: f64, y: f64, z: f64) -> Self {
@@ -74,9 +102,19 @@ impl Vector {
     }
 
     fn magnitude(&self) -> f64 {
-        // TODO Ought this not include `w`?
-        let sum_of_squares = self.x.powf(2.) + self.y.powf(2.) + self.z.powf(2.) + self.w.powf(2.);
-        sum_of_squares.sqrt()
+        magnitude(self)
+    }
+
+    fn normalize(&self) -> Self {
+        normalize(self)
+    }
+
+    fn dot(&self, rhs: &Self) -> f64 {
+        dot(self, rhs)
+    }
+
+    fn cross(&self, rhs: &Self) -> Self {
+        cross(self, rhs)
     }
 }
 
@@ -604,5 +642,42 @@ mod test {
     fn computing_the_magnitude_of_unit_vector_05() {
         let v = Vector::new(-1., -2., -3.);
         assert_eq!(v.magnitude(), f64::sqrt(14.0));
+    }
+
+    #[test]
+    fn normalizing_vector_01() {
+        let v = Vector::new(4.0, 0.0, 0.0);
+        let expected = Vector::new(1.0, 0.0, 0.0);
+        assert_eq!(v.normalize(), expected);
+    }
+
+    #[test]
+    fn normalizing_vector_02() {
+        let v = Vector::new(1.0, 2.0, 3.0);
+        let expected = Vector::new(0.26726, 0.53452, 0.80178);
+        assert_eq!(v.normalize(), expected);
+    }
+
+    #[test]
+    fn normalizing_vector_03() {
+        let v = Vector::new(1.0, 2.0, 3.0);
+        assert_eq!(v.normalize().magnitude(), 1.0);
+    }
+
+    #[test]
+    fn dot_product_of_two_points() {
+        let a = Vector::new(1.0, 2.0, 3.0);
+        let b = &Vector::new(2.0, 3.0, 4.0);
+        assert_eq!(a.dot(b), 20.0);
+    }
+
+    #[test]
+    fn cross_product_of_two_vectors() {
+        let a = Vector::new(1.0, 2.0, 3.0);
+        let b = Vector::new(2.0, 3.0, 4.0);
+        let exp1 = Vector::new(-1.0, 2.0, -1.0);
+        let exp2 = Vector::new(1.0, -2.0, 1.0);
+        assert_eq!(a.cross(&b), exp1);
+        assert_eq!(b.cross(&a), exp2);
     }
 }
