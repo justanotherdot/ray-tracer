@@ -72,6 +72,12 @@ impl Vector {
             w: VECTOR_MAGIC,
         }
     }
+
+    fn magnitude(&self) -> f64 {
+        // TODO Ought this not include `w`?
+        let sum_of_squares = self.x.powf(2.) + self.y.powf(2.) + self.z.powf(2.) + self.w.powf(2.);
+        sum_of_squares.sqrt()
+    }
 }
 
 impl PartialEq for Vector {
@@ -222,6 +228,58 @@ impl std::ops::Mul<Point> for f64 {
             y: rhs.y * self,
             z: rhs.z * self,
             w: rhs.w * self,
+        }
+    }
+}
+
+impl std::ops::Div<Vector> for f64 {
+    type Output = Vector;
+
+    fn div(self, rhs: Vector) -> Self::Output {
+        Vector {
+            x: rhs.x / self,
+            y: rhs.y / self,
+            z: rhs.z / self,
+            w: rhs.w / self,
+        }
+    }
+}
+
+impl std::ops::Div<f64> for Vector {
+    type Output = Vector;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Vector {
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs,
+            w: self.w / rhs,
+        }
+    }
+}
+
+impl std::ops::Div<Point> for f64 {
+    type Output = Point;
+
+    fn div(self, rhs: Point) -> Self::Output {
+        Point {
+            x: rhs.x / self,
+            y: rhs.y / self,
+            z: rhs.z / self,
+            w: rhs.w / self,
+        }
+    }
+}
+
+impl std::ops::Div<f64> for Point {
+    type Output = Point;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Point {
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs,
+            w: self.w / rhs,
         }
     }
 }
@@ -478,5 +536,73 @@ mod test {
         // Technically this will only effect Point, as
         // x * 0 = 0, but x * 1 = x
         assert_eq!(&(p * 3.5), &expected);
+    }
+
+    #[test]
+    fn dividing_a_point_by_a_scalar() {
+        let p = Point::new(1., -2., 3.);
+        let expected = Point {
+            x: 0.5,
+            y: -1.,
+            z: 1.5,
+            w: 0.5,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(p / 2.), &expected);
+    }
+
+    #[test]
+    fn dividing_a_vector_by_a_scalar() {
+        let v = Vector::new(1., -2., 3.);
+        let expected = Vector {
+            x: 0.5,
+            y: -1.,
+            z: 1.5,
+            w: 0.0,
+        };
+
+        // Again, we might have a w here that abuses 1 or 0
+        // so it may make sense to have assertions that panic
+        // so we can catch bugs early.
+        //
+        // Technically this will only effect Point, as
+        // x * 0 = 0, but x * 1 = x
+        assert_eq!(&(v / 2.), &expected);
+    }
+
+    #[test]
+    fn computing_the_magnitude_of_unit_vector_01() {
+        let v = Vector::new(1., 0., 0.);
+        assert_eq!(v.magnitude(), 1.);
+    }
+
+    #[test]
+    fn computing_the_magnitude_of_unit_vector_02() {
+        let v = Vector::new(0., 1., 0.);
+        assert_eq!(v.magnitude(), 1.);
+    }
+
+    #[test]
+    fn computing_the_magnitude_of_unit_vector_03() {
+        let v = Vector::new(0., 0., 1.);
+        assert_eq!(v.magnitude(), 1.);
+    }
+
+    #[test]
+    fn computing_the_magnitude_of_unit_vector_04() {
+        let v = Vector::new(1., 2., 3.);
+        assert_eq!(v.magnitude(), f64::sqrt(14.0));
+    }
+
+    #[test]
+    fn computing_the_magnitude_of_unit_vector_05() {
+        let v = Vector::new(-1., -2., -3.);
+        assert_eq!(v.magnitude(), f64::sqrt(14.0));
     }
 }
