@@ -1,17 +1,22 @@
 use crate::canvas::Canvas;
 
-// Probably ideal just to have this as a newtype-like struct.
-pub struct Ppm {
-    pub lines: Vec<String>,
+pub struct Ppm(pub String);
+
+impl Ppm {
+    pub fn blob(self) -> String {
+        self.0
+    }
 }
 
 pub fn canvas_to_ppm(canvas: Canvas) -> Ppm {
-    let mut lines = vec![];
-    lines.push("P3".to_string());
-    lines.push(format!("{} {}", canvas.width, canvas.height));
-    lines.push("255".to_string());
+    let lines = format!(
+        "P3\n{width} {height}\n{scale}",
+        width = canvas.width,
+        height = canvas.height,
+        scale = 255,
+    );
 
-    Ppm { lines }
+    Ppm(lines)
 }
 
 #[cfg(test)]
@@ -23,8 +28,8 @@ mod test {
     fn constructing_the_ppm_header() {
         let c = Canvas::new(5, 3);
         let ppm = canvas_to_ppm(c);
-        let expected = vec!["P3", "5 3", "255"];
-        assert_eq!(ppm.lines[..3], expected[..3]);
+        let expected = "P3\n5 3\n255";
+        assert_eq!(ppm.blob(), expected);
     }
 
     #[test]
@@ -34,11 +39,12 @@ mod test {
         c.write_pixel(2, 1, Color::new(0., 0.5, 0.));
         c.write_pixel(4, 2, Color::new(-0.5, 0., 1.));
         let ppm = canvas_to_ppm(c);
-        let expected = vec![
+        let rhs = vec![
             "255 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
             "0 0 0 0 0 0 0 128 0 0 0 0 0 0 0",
             "0 0 0 0 0 0 0 0 0 0 0 0 0 0 255",
         ];
-        assert_eq!(ppm.lines[3..6], expected[3..6]);
+        let lhs: Vec<&str> = ppm.blob().lines().collect();
+        assert_eq!(rhs[3..6], rhs[..]);
     }
 }
