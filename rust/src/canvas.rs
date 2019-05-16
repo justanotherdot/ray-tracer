@@ -21,8 +21,8 @@ impl Canvas {
     // Should we consumer color here?
     pub fn write_pixel(&mut self, x: usize, y: usize, color: Color) {
         // TODO Bounds check.
-        assert!(x < self.width - 1);
-        assert!(y < self.height - 1);
+        assert!(x < self.width);
+        assert!(y < self.height);
         self.pixels[(x * y) + x] = color;
     }
 
