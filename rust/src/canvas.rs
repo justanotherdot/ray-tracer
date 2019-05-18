@@ -18,16 +18,48 @@ impl Canvas {
         }
     }
 
-    // Should we consumer color here?
+    // Should we be consuming color here?
     pub fn write_pixel(&mut self, x: usize, y: usize, color: Color) {
         // TODO Bounds check.
         assert!(x < self.width);
         assert!(y < self.height);
-        self.pixels[(x * y) + x] = color;
+
+        //     A 3x3 canvas
+        //
+        // logical  --  physical
+        //
+        // 2 x x x      0 1 2
+        // 1 x x x      3 4 5
+        // 0 x x x      6 7 8
+        //   0 1 2
+
+        // (y * width) + x
+
+        self.pixels[(y * self.width) + x] = color;
     }
 
     pub fn pixel_at(&self, x: usize, y: usize) -> &Color {
-        &self.pixels[(x * y) + x]
+        assert!(x < self.width);
+        assert!(y < self.height);
+        &self.pixels[(y * self.width) + x]
+    }
+
+    // It would probably be more helpful if this returned back
+    // a pair of pixels and their respective coordinates
+    // although one could always reconstruct this with the canvas
+    // width and height, as per `crate::ppm::canvas_to_ppm`
+    pub fn pixels(&self) -> std::slice::Iter<Color> {
+        self.pixels.iter()
+    }
+
+    pub fn fill(&mut self, c: Color) {
+        // TODO There should be an iterator that produces all (x, y) pairs for a given width and
+        // height. That way `pixels` could be augmented with each pixels location.
+        for i in 0..self.width {
+            for j in 0..self.height {
+                self.write_pixel(i, j, c.clone());
+            }
+        }
     }
 }
 
@@ -41,7 +73,7 @@ mod test {
         let expected_pixel = &Color::new(0., 0., 0.);
         // TODO Canvas should have an iterator so as to
         // avoid people digging directly into `pixels`.
-        for pixel in c.pixels.iter() {
+        for pixel in c.pixels() {
             assert_eq!(pixel, expected_pixel);
         }
     }
