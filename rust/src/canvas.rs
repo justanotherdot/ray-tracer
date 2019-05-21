@@ -1,4 +1,6 @@
 use crate::color::Color;
+use crate::ppm;
+use crate::ppm::Ppm;
 
 #[derive(Debug)]
 pub struct Canvas {
@@ -63,6 +65,10 @@ impl Canvas {
             rv.push(cv);
         }
         rv
+    }
+
+    pub fn to_ppm(self) -> Ppm {
+        ppm::canvas_to_ppm(self)
     }
 
     pub fn fill(&mut self, c: Color) {
