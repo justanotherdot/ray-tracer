@@ -52,6 +52,19 @@ impl Canvas {
         self.pixels.iter()
     }
 
+    // TODO This could use some cleanup.
+    pub fn pixel_rows(&self) -> Vec<Vec<&Color>> {
+        let mut rv = vec![];
+        for y in 0..self.height {
+            let mut cv = vec![];
+            for x in 0..self.width {
+                cv.push(self.pixel_at(x, y));
+            }
+            rv.push(cv);
+        }
+        rv
+    }
+
     pub fn fill(&mut self, c: Color) {
         // TODO There should be an iterator that produces all (x, y) pairs for a given width and
         // height. That way `pixels` could be augmented with each pixels location.

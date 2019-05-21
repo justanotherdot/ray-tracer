@@ -33,49 +33,36 @@ pub fn canvas_to_ppm(canvas: Canvas) -> Ppm {
         scale = 255,
     );
 
-    let len = canvas.pixels().len();
-    let mut i = 0;
-    let mut curr_ix = 0;
-    let mut col_count = 0;
-    // This is a _teensy_ bit savage.
-    // TODO This needs to be a fold.
-    canvas.pixels().for_each(|c| {
-        let (r, g, b) = clamp_color(c.clone() * 255., 0., 255.);
+    let pixel_rows = canvas.pixel_rows();
+    let color_rows = pixel_rows.iter().map(|r| {
+        r.iter()
+            .map(|c| {
+                let (r, g, b) = clamp_color((*c).clone() * 255., 0., 255.);
+                vec![r, g, b]
+            })
+            .flatten()
+            .collect::<Vec<f64>>()
+    });
 
-        i += 1;
-
-        for col in vec![r, g, b] {
-            curr_ix += 1;
-
-            let s = format!("{}", col);
-            col_count += s.len();
-
-            if col_count >= 70 || i > canvas.width {
-                let k = lines.pop().unwrap();
-                if k != ' ' {
-                    lines.push(k);
+    // Qs:
+    //     1. What happens when row and line break reqs overlap?
+    color_rows.for_each(|row| {
+        let mut row_iter = row.into_iter();
+        if let Some(c1) = row_iter.next() {
+            let mut line = format!("{}", c1);
+            for c2 in row_iter {
+                let s2 = format!("{}", c2);
+                if line.len() + 1 + s2.len() > 70 {
+                    line.push_str("\n");
+                    lines.push_str(&line);
+                    line = s2;
+                } else {
+                    let chunk = format!(" {}", s2);
+                    line.push_str(&chunk);
                 }
-
-                lines.push_str("\n");
-                lines.push_str(&s);
-
-                col_count = s.len();
-
-                if curr_ix < len * 3 {
-                    col_count += 1;
-                    lines.push_str(" ");
-                }
-
-                if i > canvas.width {
-                    i = 0;
-                }
-            } else if curr_ix < len * 3 {
-                col_count += 1;
-                lines.push_str(&s);
-                lines.push_str(" ");
-            } else {
-                lines.push_str(&s);
             }
+            lines.push_str(&line);
+            lines.push_str("\n");
         }
     });
 
@@ -108,7 +95,7 @@ mod test {
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
         let rhs = vec!["255 0 0"];
-        assert_eq!(lhs[3..], rhs[..]);
+        assert_eq!(lhs[3..4], rhs[..]);
     }
 
     #[test]
@@ -121,7 +108,7 @@ mod test {
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
         let rhs = vec!["255 0 0", "0 255 0", "0 0 255"];
-        assert_eq!(lhs[3..], rhs[..]);
+        assert_eq!(lhs[3..6], rhs[..]);
     }
 
     #[test]
@@ -155,7 +142,7 @@ mod test {
             "153 255 204 153 255 204 153 255 204 153 255 204 153",
         ];
         println!("{:#?}", &lhs[3..]);
-        assert_eq!(lhs[3..], rhs[..]);
+        assert_eq!(lhs[3..7], rhs[..]);
     }
 
     #[test]
