@@ -74,9 +74,9 @@ impl Canvas {
     pub fn fill(&mut self, c: Color) {
         // TODO There should be an iterator that produces all (x, y) pairs for a given width and
         // height. That way `pixels` could be augmented with each pixels location.
-        for i in 0..self.width {
-            for j in 0..self.height {
-                self.write_pixel(i, j, c.clone());
+        for y in 0..self.height {
+            for x in 0..self.width {
+                self.write_pixel(x, y, c.clone());
             }
         }
     }
