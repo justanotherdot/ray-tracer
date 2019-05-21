@@ -46,14 +46,6 @@ impl Canvas {
         &self.pixels[(y * self.width) + x]
     }
 
-    // It would probably be more helpful if this returned back
-    // a pair of pixels and their respective coordinates
-    // although one could always reconstruct this with the canvas
-    // width and height, as per `crate::ppm::canvas_to_ppm`
-    pub fn pixels(&self) -> std::slice::Iter<Color> {
-        self.pixels.iter()
-    }
-
     // TODO This could use some cleanup.
     pub fn pixel_rows(&self) -> Vec<Vec<&Color>> {
         let mut rv = vec![];
@@ -92,7 +84,7 @@ mod test {
         let expected_pixel = &Color::new(0., 0., 0.);
         // TODO Canvas should have an iterator so as to
         // avoid people digging directly into `pixels`.
-        for pixel in c.pixels() {
+        for pixel in c.pixels.iter() {
             assert_eq!(pixel, expected_pixel);
         }
     }
