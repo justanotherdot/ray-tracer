@@ -5,3 +5,4 @@ authors = ["Ryan James Spencer <spencer.ryanjames@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+smallvec = "0.6.9"
