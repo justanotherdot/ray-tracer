@@ -8,6 +8,28 @@ struct Matrix {
     data: SmallVec<[f64; 0]>,
 }
 
+fn naive_approx_equal_float(x: &f64, y: &f64) -> bool {
+    const F64_EPSILON: f64 = 0.00001;
+    // TODO Needs checks for NaN and ±∞ etc.
+    if *x == std::f64::NAN && *y == std::f64::NAN {
+        return false;
+    }
+
+    (x - y).abs() < F64_EPSILON
+}
+
+impl std::cmp::PartialEq for Matrix {
+    fn eq(&self, other: &Self) -> bool {
+        if other.dims.0 != self.dims.0 || other.dims.1 != self.dims.1 {
+            return false;
+        }
+        self.data
+            .iter()
+            .zip(&other.data)
+            .all(|(x, y)| naive_approx_equal_float(x, y))
+    }
+}
+
 trait SquareMatrix {
     fn from_vec(vec: Vec<f64>) -> Self;
 }
@@ -109,5 +131,67 @@ mod test {
         assert_eq!(m[(0, 0)], -3.0);
         assert_eq!(m[(1, 1)], -2.0);
         assert_eq!(m[(2, 2)], 1.0);
+    }
+
+    #[test]
+    fn matrix_equality_with_identical_matrices() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        assert!(m == n);
+    }
+
+    #[test]
+    fn matrix_inequality_with_non_identical_matrices() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            -1., -2., -3., -4.,
+            -5., -6., -7., -8.,
+            -9., -8., -7., -6.,
+            -5., -4., -3., -2.,
+        ]);
+
+        assert!(m != n);
+    }
+
+    #[test]
+    fn matrix_inequality_with_matrices_of_differing_dims() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            -1., -2., -3.,
+            -5., -6., -7.,
+            -9., -8., -7.,
+        ]);
+
+        assert!(m != n);
     }
 }
