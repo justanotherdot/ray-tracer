@@ -1,11 +1,22 @@
 use smallvec::*;
-use std::ops::Index;
+use std::cmp::PartialEq;
+use std::ops::{Index, IndexMut, Mul};
 
+#[derive(Debug, Clone)]
 struct Matrix {
     #[allow(dead_code)]
     dims: (usize, usize),
     #[allow(dead_code)]
     data: SmallVec<[f64; 0]>,
+}
+
+impl Matrix {
+    pub fn new(num_rows: usize, num_cols: usize) -> Self {
+        Matrix {
+            dims: (num_rows, num_cols),
+            data: smallvec![0.0; num_rows*num_cols],
+        }
+    }
 }
 
 fn naive_approx_equal_float(x: &f64, y: &f64) -> bool {
@@ -18,7 +29,7 @@ fn naive_approx_equal_float(x: &f64, y: &f64) -> bool {
     (x - y).abs() < F64_EPSILON
 }
 
-impl std::cmp::PartialEq for Matrix {
+impl PartialEq for Matrix {
     fn eq(&self, other: &Self) -> bool {
         if other.dims.0 != self.dims.0 || other.dims.1 != self.dims.1 {
             return false;
@@ -56,6 +67,39 @@ impl Index<(usize, usize)> for Matrix {
         assert!(ixs.0 < self.dims.0);
         assert!(ixs.1 < self.dims.1);
         &self.data[(ixs.0 * self.dims.0) + ixs.1]
+    }
+}
+
+impl IndexMut<(usize, usize)> for Matrix {
+    fn index_mut(&mut self, ixs: (usize, usize)) -> &mut f64 {
+        // TODO Convert `assert`s to `Result`s.
+        assert!(ixs.0 < self.dims.0);
+        assert!(ixs.1 < self.dims.1);
+        &mut self.data[(ixs.0 * self.dims.0) + ixs.1]
+    }
+}
+
+fn matrix_mul(a: Matrix, b: Matrix) -> Matrix {
+    let (num_rows, num_cols) = a.dims;
+
+    // TODO Convert `assert`s to `Result`s.
+    assert!(num_rows == num_cols);
+    assert!(a.dims == b.dims);
+
+    let mut m = Matrix::new(num_rows, num_cols);
+    for row in 0..num_rows {
+        for col in 0..num_cols {
+            m[(row, col)] = (0..num_cols).fold(0.0, |acc, i| acc + a[(row, i)] * b[(i, col)]);
+        }
+    }
+    m
+}
+
+impl Mul for Matrix {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        matrix_mul(self, rhs)
     }
 }
 
@@ -193,5 +237,131 @@ mod test {
         ]);
 
         assert!(m != n);
+    }
+
+    #[test]
+    fn multiplying_two_matrices() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            -2., 1., 2., 3.,
+            3., 2., 1., -1.,
+            4., 3., 6., 5.,
+            1., 2., 7., 8.,
+        ]);
+
+        let lhs_mn = m * n;
+        #[rustfmt::skip]
+        let rhs_mn = SquareMatrix::from_vec(vec![
+            20., 22., 50., 48.,
+            44., 54., 114., 108.,
+            40., 58., 110., 102.,
+            16., 26., 46., 42.,
+        ]);
+
+        assert_eq!(lhs_mn, rhs_mn);
+    }
+
+    #[test]
+    fn multiplying_two_matrices_2x2() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2.,
+            5., 6.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            -2., 1.,
+            3.,  2.,
+        ]);
+
+        let lhs_mn = m * n;
+        #[rustfmt::skip]
+        let rhs_mn = SquareMatrix::from_vec(vec![
+            4., 5.,
+            8., 17.,
+        ]);
+
+        assert_eq!(lhs_mn, rhs_mn);
+    }
+
+    #[test]
+    fn multiplying_two_matrices_3x3() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3.,
+            5., 6., 7.,
+            9., 8., 7.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            -2., 1., 2.,
+            3., 2., 1.,
+            4., 3., 6.,
+        ]);
+
+        let lhs_mn = m * n;
+        #[rustfmt::skip]
+        let rhs_mn = SquareMatrix::from_vec(vec![
+            16., 14., 22.,
+            36., 38., 58.,
+            34., 46., 68.,
+        ]);
+
+        assert_eq!(lhs_mn, rhs_mn);
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_matrix_multiplication_01() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3.,
+            5., 6., 7.,
+            9., 8., 7.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            -2., 1., 2., 2.,
+            3., 2., 1., 2.,
+            4., 3., 6., 2.,
+            2., 2., 2., 2.,
+        ]);
+
+        let _ = m * n;
+    }
+
+    #[test]
+    fn matrix_multiplication_is_not_associative() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_vec(vec![
+            -2., 1., 2., 3.,
+            3., 2., 1., -1.,
+            4., 3., 6., 5.,
+            1., 2., 7., 8.,
+        ]);
+
+        let mn = m.clone() * n.clone();
+        let nm = n * m;
+
+        assert!(mn != nm);
     }
 }
