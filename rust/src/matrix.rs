@@ -79,6 +79,7 @@ impl IdentityMatrix for Matrix {
 pub trait SquareMatrix {
     fn dim(&self) -> usize;
     fn from_vec(vec: Vec<f64>) -> Self;
+    fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
 }
 
 impl SquareMatrix for Matrix {
@@ -89,6 +90,16 @@ impl SquareMatrix for Matrix {
     // A dependantly typed language could encode this in the type system.
     // Rust is not one of those languages, so instead we'll have do the checks at runtime here.
     fn from_vec(vec: Vec<f64>) -> Self {
+        let dim = (vec.len() as f64).log2() as usize;
+        assert!(vec.len() == 4 || vec.len() == 9 || vec.len() == 16);
+        Matrix {
+            dims: (dim, dim),
+            data: SmallVec::from_vec(vec),
+        }
+    }
+
+    fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self {
+        let vec: Vec<f64> = vec.into_iter().flatten().collect();
         let dim = (vec.len() as f64).log2() as usize;
         assert!(vec.len() == 4 || vec.len() == 9 || vec.len() == 16);
         Matrix {
@@ -430,12 +441,11 @@ mod test {
 
     #[test]
     fn multiplying_a_matrix_by_the_identity_matrix() {
-        #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
-            1., 2., 3., 4.,
-            5., 6., 7., 8.,
-            9., 8., 7., 6.,
-            5., 4., 3., 2.,
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 2., 3., 4.],
+            vec![5., 6., 7., 8.],
+            vec![9., 8., 7., 6.],
+            vec![5., 4., 3., 2.],
         ]);
 
         assert_eq!(m.clone() * m.identity(), m);
