@@ -2,8 +2,30 @@ use smallvec::*;
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut, Mul};
 
+#[allow(dead_code)]
+fn identity_matrix_from_dims(num_rows: usize, num_cols: usize) -> Matrix {
+    assert!(num_rows == num_cols);
+    let dim = num_rows;
+    (0..dim).fold(Matrix::new(dim, dim), |mut m, i| {
+        m[(i, i)] = 1.;
+        m
+    })
+}
+
+/// Generate an identity matrix with the same dimensions as this Matrix.
+fn identity_matrix_from_square_matrix<M>(m: &M) -> Matrix
+where
+    M: SquareMatrix,
+{
+    let dim = m.dim();
+    (0..dim).fold(Matrix::new(dim, dim), |mut m, i| {
+        m[(i, i)] = 1.;
+        m
+    })
+}
+
 #[derive(Debug, Clone)]
-struct Matrix {
+pub struct Matrix {
     #[allow(dead_code)]
     dims: (usize, usize),
     #[allow(dead_code)]
@@ -41,11 +63,29 @@ impl PartialEq for Matrix {
     }
 }
 
-trait SquareMatrix {
+pub trait IdentityMatrix
+where
+    Self: SquareMatrix,
+{
+    fn identity(self: &Self) -> Matrix;
+}
+
+impl IdentityMatrix for Matrix {
+    fn identity(&self) -> Matrix {
+        identity_matrix_from_square_matrix(self)
+    }
+}
+
+pub trait SquareMatrix {
+    fn dim(&self) -> usize;
     fn from_vec(vec: Vec<f64>) -> Self;
 }
 
 impl SquareMatrix for Matrix {
+    fn dim(&self) -> usize {
+        self.dims.0
+    }
+
     // A dependantly typed language could encode this in the type system.
     // Rust is not one of those languages, so instead we'll have do the checks at runtime here.
     fn from_vec(vec: Vec<f64>) -> Self {
@@ -363,5 +403,41 @@ mod test {
         let nm = n * m;
 
         assert!(mn != nm);
+    }
+
+    #[test]
+    fn identity_matrices_have_the_right_shape() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        let actual_ident = m.identity();
+
+        #[rustfmt::skip]
+        let expected_ident = SquareMatrix::from_vec(vec![
+            1., 0., 0., 0.,
+            0., 1., 0., 0.,
+            0., 0., 1., 0.,
+            0., 0., 0., 1.,
+        ]);
+
+        assert_eq!(actual_ident, expected_ident);
+    }
+
+    #[test]
+    fn multiplying_a_matrix_by_the_identity_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_vec(vec![
+            1., 2., 3., 4.,
+            5., 6., 7., 8.,
+            9., 8., 7., 6.,
+            5., 4., 3., 2.,
+        ]);
+
+        assert_eq!(m.clone() * m.identity(), m);
     }
 }
