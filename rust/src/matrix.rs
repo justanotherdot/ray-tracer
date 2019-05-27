@@ -130,7 +130,7 @@ impl IndexMut<(usize, usize)> for Matrix {
     }
 }
 
-fn matrix_mul(a: Matrix, b: Matrix) -> Matrix {
+pub fn matrix_mul(a: &Matrix, b: &Matrix) -> Matrix {
     let (num_rows, num_cols) = a.dims;
 
     // TODO Convert `assert`s to `Result`s.
@@ -146,11 +146,26 @@ fn matrix_mul(a: Matrix, b: Matrix) -> Matrix {
     m
 }
 
+// n.b. This is just a hack to potentially avoid a lot of costly allocations.
+pub fn matrix_mul_mut(a: &Matrix, b: &Matrix, m: &mut Matrix) {
+    let (num_rows, num_cols) = a.dims;
+
+    // TODO Convert `assert`s to `Result`s.
+    assert!(num_rows == num_cols);
+    assert!(a.dims == b.dims);
+
+    for row in 0..num_rows {
+        for col in 0..num_cols {
+            m[(row, col)] = (0..num_cols).fold(0.0, |acc, i| acc + a[(row, i)] * b[(i, col)]);
+        }
+    }
+}
+
 impl Mul for Matrix {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        matrix_mul(self, rhs)
+        matrix_mul(&self, &rhs)
     }
 }
 
@@ -448,6 +463,21 @@ mod test {
             vec![5., 4., 3., 2.],
         ]);
 
-        assert_eq!(m.clone() * m.identity(), m);
+        assert_eq!(&matrix_mul(&m, &m.identity()), &m);
+    }
+
+    #[test]
+    fn multiplying_matrices_mutably() {
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 2., 3., 4.],
+            vec![5., 6., 7., 8.],
+            vec![9., 8., 7., 6.],
+            vec![5., 4., 3., 2.],
+        ]);
+
+        let mut n = Matrix::new(m.dim(), m.dim());
+
+        matrix_mul_mut(&m, &m.identity(), &mut n);
+        assert_eq!(&m, &n);
     }
 }
