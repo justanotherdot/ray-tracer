@@ -67,7 +67,7 @@ pub trait IdentityMatrix
 where
     Self: SquareMatrix,
 {
-    fn identity(self: &Self) -> Matrix;
+    fn identity(&self) -> Matrix;
 }
 
 impl IdentityMatrix for Matrix {
@@ -80,6 +80,7 @@ pub trait SquareMatrix {
     fn dim(&self) -> usize;
     fn from_vec(vec: Vec<f64>) -> Self;
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
+    fn transpose(&self) -> Self;
 }
 
 impl SquareMatrix for Matrix {
@@ -106,6 +107,17 @@ impl SquareMatrix for Matrix {
             dims: (dim, dim),
             data: SmallVec::from_vec(vec),
         }
+    }
+
+    fn transpose(&self) -> Self {
+        let dim = self.dim();
+        let mut m = self.clone();
+        for row in 0..dim {
+            for col in 0..dim {
+                m[(col, row)] = self[(row, col)];
+            }
+        }
+        m
     }
 }
 
@@ -479,5 +491,31 @@ mod test {
 
         matrix_mul_mut(&m, &m.identity(), &mut n);
         assert_eq!(&m, &n);
+    }
+
+    #[test]
+    fn transposing_a_matrix() {
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![0., 9., 3., 0.],
+            vec![9., 8., 0., 8.],
+            vec![1., 8., 5., 3.],
+            vec![0., 0., 5., 8.],
+        ]);
+
+        let n: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![0., 9., 1., 0.],
+            vec![9., 8., 8., 0.],
+            vec![3., 0., 5., 5.],
+            vec![0., 8., 3., 8.],
+        ]);
+
+        assert_eq!(m.transpose(), n);
+    }
+
+    #[test]
+    fn transposing_the_identity_matrix() {
+        let identity = identity_matrix_from_dims(3, 3);
+
+        assert_eq!(identity.transpose(), identity);
     }
 }
