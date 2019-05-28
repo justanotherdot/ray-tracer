@@ -6,7 +6,7 @@ use std::ops::{Index, IndexMut, Mul};
 fn identity_matrix_from_dims(num_rows: usize, num_cols: usize) -> Matrix {
     assert!(num_rows == num_cols);
     let dim = num_rows;
-    (0..dim).fold(Matrix::new(dim, dim), |mut m, i| {
+    (0..dim).fold(Matrix::empty(dim, dim), |mut m, i| {
         m[(i, i)] = 1.;
         m
     })
@@ -18,7 +18,7 @@ where
     M: SquareMatrix,
 {
     let dim = m.dim();
-    (0..dim).fold(Matrix::new(dim, dim), |mut m, i| {
+    (0..dim).fold(Matrix::empty(dim, dim), |mut m, i| {
         m[(i, i)] = 1.;
         m
     })
@@ -33,7 +33,7 @@ pub struct Matrix {
 }
 
 impl Matrix {
-    pub fn new(num_rows: usize, num_cols: usize) -> Self {
+    pub fn empty(num_rows: usize, num_cols: usize) -> Self {
         Matrix {
             dims: (num_rows, num_cols),
             data: smallvec![0.0; num_rows*num_cols],
@@ -77,10 +77,12 @@ impl IdentityMatrix for Matrix {
 }
 
 pub trait SquareMatrix {
-    fn dim(&self) -> usize;
     fn from_vec(vec: Vec<f64>) -> Self;
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
+    fn dim(&self) -> usize;
     fn transpose(&self) -> Self;
+    fn determinant(&self) -> u64;
+    fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
 }
 
 impl SquareMatrix for Matrix {
@@ -88,6 +90,7 @@ impl SquareMatrix for Matrix {
         self.dims.0
     }
 
+    // TODO One day having instances of From for SquareMatrix
     // A dependantly typed language could encode this in the type system.
     // Rust is not one of those languages, so instead we'll have do the checks at runtime here.
     fn from_vec(vec: Vec<f64>) -> Self {
@@ -99,6 +102,7 @@ impl SquareMatrix for Matrix {
         }
     }
 
+    // TODO One day having instances of From for SquareMatrix
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self {
         let vec: Vec<f64> = vec.into_iter().flatten().collect();
         let dim = (vec.len() as f64).log2() as usize;
@@ -115,6 +119,44 @@ impl SquareMatrix for Matrix {
         for row in 0..dim {
             for col in 0..dim {
                 m[(col, row)] = self[(row, col)];
+            }
+        }
+        m
+    }
+
+    fn determinant(&self) -> u64 {
+        if self.dim() != 2 {
+            unimplemented!()
+        }
+
+        let m = self;
+        let a = m[(0, 0)];
+        let b = m[(0, 1)];
+        let c = m[(1, 0)];
+        let d = m[(1, 1)];
+
+        (a * d - b * c).round() as u64
+    }
+
+    /// submatrix deletes exactly one row and one column,
+    /// effectively reducing the dimension by one.
+    fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self {
+        let dim = self.dim() - 1;
+        let mut m: Matrix = Matrix::empty(dim, dim);
+        // TODO Yuck.
+        let mut target_row = 0;
+        let mut target_col = 0;
+        for row in 0..self.dim() {
+            for col in 0..self.dim() {
+                if row == exc_row || col == exc_col {
+                    continue;
+                }
+
+                m[(target_row, target_col)] = self[(row, col)];
+                target_col = (target_col + 1) % dim;
+            }
+            if row != exc_row {
+                target_row = (target_row + 1) % dim;
             }
         }
         m
@@ -149,7 +191,7 @@ pub fn matrix_mul(a: &Matrix, b: &Matrix) -> Matrix {
     assert!(num_rows == num_cols);
     assert!(a.dims == b.dims);
 
-    let mut m = Matrix::new(num_rows, num_cols);
+    let mut m = Matrix::empty(num_rows, num_cols);
     for row in 0..num_rows {
         for col in 0..num_cols {
             m[(row, col)] = (0..num_cols).fold(0.0, |acc, i| acc + a[(row, i)] * b[(i, col)]);
@@ -487,7 +529,7 @@ mod test {
             vec![5., 4., 3., 2.],
         ]);
 
-        let mut n = Matrix::new(m.dim(), m.dim());
+        let mut n = Matrix::empty(m.dim(), m.dim());
 
         matrix_mul_mut(&m, &m.identity(), &mut n);
         assert_eq!(&m, &n);
@@ -517,5 +559,54 @@ mod test {
         let identity = identity_matrix_from_dims(3, 3);
 
         assert_eq!(identity.transpose(), identity);
+    }
+
+    #[test]
+    fn calculating_the_determinant_of_a_2x2_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 5.],
+            vec![-3., 2.],
+        ]);
+
+        assert_eq!(m.determinant(), 17);
+    }
+
+    #[test]
+    fn a_submatrix_of_a_3x3_matrix_is_a_2x2_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 5., 0.],
+            vec![-3., 2., 7.],
+            vec![0., 6., -3.],
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-3., 2.],
+            vec![0., 6.],
+        ]);
+
+        assert_eq!(m.submatrix(0, 2), n);
+    }
+
+    #[test]
+    fn a_submatrix_of_a_4x4_matrix_is_a_3x3_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-6., 1., 1., 6.],
+            vec![-8., 5., 8., 6.],
+            vec![-1., 0., 8., 2.],
+            vec![-7., 1., -1., 1.],
+        ]);
+
+        #[rustfmt::skip]
+        let n: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-6., 1., 6.],
+            vec![-8., 8., 6.],
+            vec![-7., -1., 1.],
+        ]);
+
+        assert_eq!(m.submatrix(2, 1), n);
     }
 }
