@@ -83,6 +83,7 @@ pub trait SquareMatrix {
     fn transpose(&self) -> Self;
     fn determinant(&self) -> u64;
     fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
+    fn minor(&self, exc_row: usize, exc_col: usize) -> u64;
 }
 
 impl SquareMatrix for Matrix {
@@ -156,10 +157,15 @@ impl SquareMatrix for Matrix {
                 target_col = (target_col + 1) % dim;
             }
             if row != exc_row {
-                target_row = (target_row + 1) % dim;
+                target_row += 1;
             }
         }
         m
+    }
+
+    fn minor(&self, exc_row: usize, exc_col: usize) -> u64 {
+        let submatrix = self.submatrix(exc_row, exc_col);
+        submatrix.determinant()
     }
 }
 
@@ -608,5 +614,19 @@ mod test {
         ]);
 
         assert_eq!(m.submatrix(2, 1), n);
+    }
+
+    #[test]
+    fn calculating_a_minor_of_a_3x3_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![3., 5., 0.],
+            vec![2., -1., -7.],
+            vec![6., -1., 5.],
+        ]);
+
+        assert_eq!(m.submatrix(1, 0).determinant(), 25);
+        assert_eq!(m.minor(1, 0), 25);
+        assert_eq!(m.minor(1, 0), m.submatrix(1, 0).determinant());
     }
 }
