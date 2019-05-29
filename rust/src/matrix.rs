@@ -127,17 +127,21 @@ impl SquareMatrix for Matrix {
     }
 
     fn determinant(&self) -> i64 {
-        if self.dim() != 2 {
-            unimplemented!()
-        }
-
         let m = self;
-        let a = m[(0, 0)];
-        let b = m[(0, 1)];
-        let c = m[(1, 0)];
-        let d = m[(1, 1)];
+        if m.dim() == 2 {
+            let a = m[(0, 0)];
+            let b = m[(0, 1)];
+            let c = m[(1, 0)];
+            let d = m[(1, 1)];
 
-        (a * d - b * c).round() as i64
+            (a * d - b * c).round() as i64
+        } else {
+            let mut det = 0;
+            for col in 0..m.dim() {
+                det += (m[(0, col)] as i64) * m.cofactor(0, col);
+            }
+            det
+        }
     }
 
     /// submatrix deletes exactly one row and one column,
@@ -650,5 +654,37 @@ mod test {
         assert_eq!(m.cofactor(0, 0), -12);
         assert_eq!(m.minor(1, 0), 25);
         assert_eq!(m.cofactor(1, 0), -25);
+    }
+
+    #[test]
+    fn calculating_the_determinant_of_a_3x3_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 2., 6.],
+            vec![-5., 8., -4.],
+            vec![2., 6., 4.],
+        ]);
+
+        assert_eq!(m.cofactor(0, 0), 56);
+        assert_eq!(m.cofactor(0, 1), 12);
+        assert_eq!(m.cofactor(0, 2), -46);
+        assert_eq!(m.determinant(), -196);
+    }
+
+    #[test]
+    fn calculating_the_determinant_of_a_4x4_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-2., -8., 3., 5.],
+            vec![-3., 1., 7., 3.],
+            vec![1., 2., -9., 6.],
+            vec![-6., 7., 7., -9.],
+        ]);
+
+        assert_eq!(m.cofactor(0, 0), 690);
+        assert_eq!(m.cofactor(0, 1), 447);
+        assert_eq!(m.cofactor(0, 2), 210);
+        assert_eq!(m.cofactor(0, 3), 51);
+        assert_eq!(m.determinant(), -4071);
     }
 }
