@@ -85,6 +85,8 @@ pub trait SquareMatrix {
     fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
     fn minor(&self, exc_row: usize, exc_col: usize) -> i64;
     fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64;
+    fn is_invertible(&self) -> bool;
+    fn inverse(&self) -> Self;
 }
 
 impl SquareMatrix for Matrix {
@@ -174,9 +176,27 @@ impl SquareMatrix for Matrix {
     }
 
     fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64 {
-        let ix = (exc_row * self.dims.0) + exc_col;
-        let factor = if ix % 2 == 0 { 1 } else { -1 };
+        let factor = if (exc_row + exc_col) % 2 == 1 { -1 } else { 1 };
         factor * self.minor(exc_row, exc_col)
+    }
+
+    fn is_invertible(&self) -> bool {
+        self.determinant() != 0
+    }
+
+    fn inverse(&self) -> Self {
+        assert!(self.is_invertible());
+
+        let mut copy = Matrix::empty(self.dim(), self.dim());
+
+        let det = self.determinant() as f64;
+        for row in 0..copy.dim() {
+            for col in 0..copy.dim() {
+                copy[(col, row)] = self.cofactor(row, col) as f64 / det;
+            }
+        }
+
+        copy
     }
 }
 
@@ -686,5 +706,61 @@ mod test {
         assert_eq!(m.cofactor(0, 2), 210);
         assert_eq!(m.cofactor(0, 3), 51);
         assert_eq!(m.determinant(), -4071);
+    }
+
+    #[test]
+    fn testing_an_invertible_matrix_for_invertibility() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![6., 4., 4., 4.],
+            vec![5., 5., 7., 6.],
+            vec![4., -9., 3., -7.],
+            vec![9., 1., 7., -6.],
+        ]);
+
+        assert_eq!(m.determinant(), -2120);
+        assert_eq!(m.is_invertible(), true);
+    }
+
+    #[test]
+    fn testing_a_noninvertible_matrix_for_invertibility() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-4., 2., -2., -3.],
+            vec![9., 6., 2., 6.],
+            vec![0., -5., 1., -5.],
+            vec![0., 0., 0., 0.],
+        ]);
+
+        assert_eq!(m.determinant(), 0);
+        assert_eq!(m.is_invertible(), false);
+    }
+
+    #[test]
+    fn calculating_the_inverse_of_a_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-5., 2., 6., -8.],
+            vec![1., -5., 1., 8.],
+            vec![7., 7., -6., -7.],
+            vec![1., -3., 7., 4.],
+        ]);
+
+        let n = m.inverse();
+
+        assert_eq!(m.determinant(), 532);
+        assert_eq!(m.cofactor(2, 3), -160);
+        assert_eq!(n[(3, 2)], -160. / 532.);
+        assert_eq!(m.cofactor(3, 2), 105);
+        assert_eq!(n[(2, 3)], 105. / 532.);
+
+        let expected_n: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![0.21805, 0.45113, 0.24060, -0.04511],
+            vec![-0.80827, -1.45677, -0.44361, 0.52068],
+            vec![-0.07895, -0.22368, -0.05263, 0.19737],
+            vec![-0.52256, -0.81391, -0.30075, 0.30639],
+        ]);
+
+        assert_eq!(n, expected_n);
     }
 }
