@@ -81,9 +81,10 @@ pub trait SquareMatrix {
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
     fn dim(&self) -> usize;
     fn transpose(&self) -> Self;
-    fn determinant(&self) -> u64;
+    fn determinant(&self) -> i64;
     fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
-    fn minor(&self, exc_row: usize, exc_col: usize) -> u64;
+    fn minor(&self, exc_row: usize, exc_col: usize) -> i64;
+    fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64;
 }
 
 impl SquareMatrix for Matrix {
@@ -125,7 +126,7 @@ impl SquareMatrix for Matrix {
         m
     }
 
-    fn determinant(&self) -> u64 {
+    fn determinant(&self) -> i64 {
         if self.dim() != 2 {
             unimplemented!()
         }
@@ -136,7 +137,7 @@ impl SquareMatrix for Matrix {
         let c = m[(1, 0)];
         let d = m[(1, 1)];
 
-        (a * d - b * c).round() as u64
+        (a * d - b * c).round() as i64
     }
 
     /// submatrix deletes exactly one row and one column,
@@ -163,9 +164,15 @@ impl SquareMatrix for Matrix {
         m
     }
 
-    fn minor(&self, exc_row: usize, exc_col: usize) -> u64 {
+    fn minor(&self, exc_row: usize, exc_col: usize) -> i64 {
         let submatrix = self.submatrix(exc_row, exc_col);
         submatrix.determinant()
+    }
+
+    fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64 {
+        let ix = (exc_row * self.dims.0) + exc_col;
+        let factor = if ix % 2 == 0 { 1 } else { -1 };
+        factor * self.minor(exc_row, exc_col)
     }
 }
 
@@ -628,5 +635,20 @@ mod test {
         assert_eq!(m.submatrix(1, 0).determinant(), 25);
         assert_eq!(m.minor(1, 0), 25);
         assert_eq!(m.minor(1, 0), m.submatrix(1, 0).determinant());
+    }
+
+    #[test]
+    fn calculating_a_cofactor_of_a_3x3_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![3., 5., 0.],
+            vec![2., -1., -7.],
+            vec![6., -1., 5.],
+        ]);
+
+        assert_eq!(m.minor(0, 0), -12);
+        assert_eq!(m.cofactor(0, 0), -12);
+        assert_eq!(m.minor(1, 0), 25);
+        assert_eq!(m.cofactor(1, 0), -25);
     }
 }
