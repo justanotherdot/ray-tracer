@@ -763,4 +763,68 @@ mod test {
 
         assert_eq!(n, expected_n);
     }
+
+    #[test]
+    fn calculating_the_inverse_of_another_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![8., -5., 9., 2.],
+            vec![7., 5., 6., 1.],
+            vec![-6., 0., 9., 6.],
+            vec![-3., 0., -9., -4.],
+        ]);
+
+        #[rustfmt::skip]
+        let m_inverse: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-0.15385, -0.15385, -0.28205, -0.53846],
+            vec![-0.07692,  0.12308,  0.02564,  0.03077],
+            vec![ 0.35897,  0.35897,  0.43590,  0.92308],
+            vec![-0.69231, -0.69231, -0.76923, -1.92308],
+        ]);
+
+        assert_eq!(m.inverse(), m_inverse);
+    }
+
+    #[test]
+    fn calculating_the_inverse_of_a_third_matrix() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![9., 3., 0., 9.],
+            vec![-5., -2., -6., -3.],
+            vec![-4., 9., 6., 4.],
+            vec![-7., 6., 6., 2.],
+        ]);
+
+        #[rustfmt::skip]
+        let m_inverse: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![-0.04074, -0.07778,  0.14444, -0.22222],
+            vec![-0.07778,  0.03333,  0.36667, -0.33333],
+            vec![-0.02901, -0.14630, -0.10926,  0.12963],
+            vec![ 0.17778,  0.06667, -0.26667,  0.33333],
+        ]);
+
+        assert_eq!(m.inverse(), m_inverse);
+    }
+
+    #[test]
+    fn multiplying_a_product_by_its_inverse() {
+        #[rustfmt::skip]
+        let a: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![ 3., -9.,  7.,  3.],
+            vec![ 3., -8.,  2., -9.],
+            vec![-4.,  4.,  4.,  1.],
+            vec![-6.,  5., -1.,  1.],
+        ]);
+
+        #[rustfmt::skip]
+        let b: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![ 8.,  2.,  2.,  2.],
+            vec![ 3., -1.,  7.,  0.],
+            vec![ 7.,  0.,  5.,  4.],
+            vec![ 6., -2.,  0.,  5.],
+        ]);
+
+        let c = a.clone() * b.clone();
+        assert_eq!(c * b.inverse(), a);
+    }
 }
