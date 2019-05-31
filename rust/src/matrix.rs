@@ -1,3 +1,4 @@
+use crate::coordinate::{Point, Vector};
 use smallvec::*;
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut, Mul};
@@ -260,9 +261,41 @@ impl Mul for Matrix {
     }
 }
 
+impl Mul<Vector> for Matrix {
+    type Output = Vector;
+
+    fn mul(self, rhs: Self::Output) -> Self::Output {
+        assert!(self.dims.1 == rhs.len());
+        let mut v = Vector::new(0., 0., 0.);
+        for row in 0..self.dims.0 {
+            for col in 0..self.dims.1 {
+                v[row] += rhs[col] * self[(row, col)];
+            }
+        }
+        v
+    }
+}
+
+impl Mul<Point> for Matrix {
+    type Output = Point;
+
+    fn mul(self, rhs: Self::Output) -> Self::Output {
+        assert!(self.dims.1 == rhs.len());
+        let mut p = Point::new(0., 0., 0.);
+        for row in 0..self.dims.0 {
+            for col in 0..self.dims.1 {
+                p[row] += rhs[col] * self[(row, col)];
+            }
+        }
+        p.w = 1.0;
+        p
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::coordinate::*;
 
     #[test]
     fn constructing_and_inspecting_a_4x4_matrix() {
@@ -826,5 +859,37 @@ mod test {
 
         let c = a.clone() * b.clone();
         assert_eq!(c * b.inverse(), a);
+    }
+
+    #[test]
+    fn a_matrix_multiplied_by_a_point() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 2., 3., 4.],
+            vec![2., 4., 4., 2.],
+            vec![8., 6., 4., 1.],
+            vec![0., 0., 0., 1.],
+        ]);
+
+        #[rustfmt::skip]
+        let b = Point::new(1., 2., 3.);
+
+        assert_eq!(m * b, Point::new(18., 24., 33.));
+    }
+
+    #[test]
+    fn a_matrix_multiplied_by_a_vector() {
+        #[rustfmt::skip]
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 2., 3., 4.],
+            vec![2., 4., 4., 2.],
+            vec![8., 6., 4., 1.],
+            vec![0., 0., 0., 1.],
+        ]);
+
+        #[rustfmt::skip]
+        let b = Vector::new(1., 2., 3.);
+
+        assert_eq!(m * b, Vector::new(14., 22., 32.));
     }
 }

@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 // These really ought to be enums and probably mean we don't need `w`, but we'll see how it pans
 // out in the book.
 #[allow(dead_code)]
@@ -23,6 +25,10 @@ impl Point {
             z,
             w: POINT_MAGIC,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        4
     }
 }
 
@@ -90,6 +96,74 @@ fn cross(a: &Vector, b: &Vector) -> Vector {
     )
 }
 
+// TODO A macro could easily impl Vector and Point here.
+impl Index<usize> for Vector {
+    type Output = f64;
+
+    fn index(&self, ix: usize) -> &f64 {
+        match ix {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!(format!(
+                "index out of bounds: the len is 4 but the index is {}",
+                ix
+            )),
+        }
+    }
+}
+
+// TODO A macro could easily impl Vector and Point here.
+impl IndexMut<usize> for Vector {
+    fn index_mut(&mut self, ix: usize) -> &mut f64 {
+        match ix {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!(format!(
+                "index out of bounds: the len is 4 but the index is {}",
+                ix
+            )),
+        }
+    }
+}
+
+// TODO A macro could easily impl Vector and Point here.
+impl Index<usize> for Point {
+    type Output = f64;
+
+    fn index(&self, ix: usize) -> &f64 {
+        match ix {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!(format!(
+                "index out of bounds: the len is 4 but the index is {}",
+                ix
+            )),
+        }
+    }
+}
+
+// TODO A macro could easily impl Vector and Point here.
+impl IndexMut<usize> for Point {
+    fn index_mut(&mut self, ix: usize) -> &mut f64 {
+        match ix {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!(format!(
+                "index out of bounds: the len is 4 but the index is {}",
+                ix
+            )),
+        }
+    }
+}
+
 #[allow(dead_code)]
 impl Vector {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
@@ -115,6 +189,10 @@ impl Vector {
 
     pub fn cross(&self, rhs: &Self) -> Self {
         cross(self, rhs)
+    }
+
+    pub fn len(&self) -> usize {
+        4
     }
 }
 
@@ -679,5 +757,35 @@ mod test {
         let exp2 = Vector::new(1.0, -2.0, 1.0);
         assert_eq!(a.cross(&b), exp1);
         assert_eq!(b.cross(&a), exp2);
+    }
+
+    #[test]
+    fn vectors_can_be_indexed() {
+        let a = Vector::new(1.0, 2.0, 3.0);
+        assert_eq!(a[0], 1.0);
+        assert_eq!(a[1], 2.0);
+        assert_eq!(a[2], 3.0);
+        assert_eq!(a[3], 0.0);
+    }
+
+    #[test]
+    fn points_can_be_indexed() {
+        let a = Point::new(1.0, 2.0, 3.0);
+        assert_eq!(a[0], 1.0);
+        assert_eq!(a[1], 2.0);
+        assert_eq!(a[2], 3.0);
+        assert_eq!(a[3], 1.0);
+    }
+
+    #[test]
+    fn points_have_a_length() {
+        let a = Point::new(1.0, 2.0, 3.0);
+        assert_eq!(a.len(), 4);
+    }
+
+    #[test]
+    fn vectors_have_a_length() {
+        let a = Vector::new(1.0, 2.0, 3.0);
+        assert_eq!(a.len(), 4);
     }
 }
