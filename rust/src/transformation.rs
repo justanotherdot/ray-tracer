@@ -34,6 +34,34 @@ pub fn rotation_x(r: f64) -> Matrix {
     m
 }
 
+pub fn rotation_y(r: f64) -> Matrix {
+    let mut m = Matrix::empty(4, 4).identity();
+
+    let cos_r = r.cos();
+    let sin_r = r.sin();
+
+    m[(0, 0)] = cos_r;
+    m[(0, 2)] = sin_r;
+    m[(2, 0)] = -sin_r;
+    m[(2, 2)] = cos_r;
+
+    m
+}
+
+pub fn rotation_z(r: f64) -> Matrix {
+    let mut m = Matrix::empty(4, 4).identity();
+
+    let cos_r = r.cos();
+    let sin_r = r.sin();
+
+    m[(0, 0)] = cos_r;
+    m[(0, 1)] = -sin_r;
+    m[(1, 0)] = sin_r;
+    m[(1, 1)] = cos_r;
+
+    m
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -108,5 +136,29 @@ mod test {
             half_quarter_inverse * p,
             Point::new(0., 2_f64.sqrt() / 2., -2_f64.sqrt() / 2.)
         );
+    }
+
+    #[test]
+    fn rotating_a_point_around_the_y_axis() {
+        let p = Point::new(0., 0., 1.);
+        let half_quarter = rotation_y(std::f64::consts::PI / 4.);
+        let full_quarter = rotation_y(std::f64::consts::PI / 2.);
+        assert_eq!(
+            half_quarter * p,
+            Point::new(2_f64.sqrt() / 2., 0., 2_f64.sqrt() / 2.)
+        );
+        assert_eq!(full_quarter * p, Point::new(1., 0., 0.));
+    }
+
+    #[test]
+    fn rotating_a_point_around_the_z_axis() {
+        let p = Point::new(0., 1., 0.);
+        let half_quarter = rotation_z(std::f64::consts::PI / 4.);
+        let full_quarter = rotation_z(std::f64::consts::PI / 2.);
+        assert_eq!(
+            half_quarter * p,
+            Point::new(-2_f64.sqrt() / 2., 2_f64.sqrt() / 2., 0.)
+        );
+        assert_eq!(full_quarter * p, Point::new(-1., 0., 0.));
     }
 }
