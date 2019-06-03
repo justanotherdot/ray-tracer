@@ -84,10 +84,10 @@ pub trait SquareMatrix {
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
     fn dim(&self) -> usize;
     fn transpose(&self) -> Self;
-    fn determinant(&self) -> i64;
+    fn determinant(&self) -> f64;
     fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
-    fn minor(&self, exc_row: usize, exc_col: usize) -> i64;
-    fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64;
+    fn minor(&self, exc_row: usize, exc_col: usize) -> f64;
+    fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64;
     fn is_invertible(&self) -> bool;
     fn inverse(&self) -> Self;
 }
@@ -131,7 +131,7 @@ impl SquareMatrix for Matrix {
         m
     }
 
-    fn determinant(&self) -> i64 {
+    fn determinant(&self) -> f64 {
         let m = self;
         if m.dim() == 2 {
             let a = m[(0, 0)];
@@ -139,11 +139,11 @@ impl SquareMatrix for Matrix {
             let c = m[(1, 0)];
             let d = m[(1, 1)];
 
-            (a * d - b * c).round() as i64
+            (a * d - b * c)
         } else {
-            let mut det = 0;
+            let mut det = 0.;
             for col in 0..m.dim() {
-                det += (m[(0, col)] as i64) * m.cofactor(0, col);
+                det += m[(0, col)] * m.cofactor(0, col);
             }
             det
         }
@@ -173,18 +173,22 @@ impl SquareMatrix for Matrix {
         m
     }
 
-    fn minor(&self, exc_row: usize, exc_col: usize) -> i64 {
+    fn minor(&self, exc_row: usize, exc_col: usize) -> f64 {
         let submatrix = self.submatrix(exc_row, exc_col);
         submatrix.determinant()
     }
 
-    fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64 {
-        let factor = if (exc_row + exc_col) % 2 == 1 { -1 } else { 1 };
+    fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64 {
+        let factor = if (exc_row + exc_col) % 2 == 1 {
+            -1.0
+        } else {
+            1.0
+        };
         factor * self.minor(exc_row, exc_col)
     }
 
     fn is_invertible(&self) -> bool {
-        self.determinant() != 0
+        self.determinant() != 0.
     }
 
     fn inverse(&self) -> Self {
@@ -690,7 +694,7 @@ mod test {
             vec![-3., 2.],
         ]);
 
-        assert_eq!(m.determinant(), 17);
+        assert_eq!(m.determinant(), 17.);
     }
 
     #[test]
@@ -740,8 +744,8 @@ mod test {
             vec![6., -1., 5.],
         ]);
 
-        assert_eq!(m.submatrix(1, 0).determinant(), 25);
-        assert_eq!(m.minor(1, 0), 25);
+        assert_eq!(m.submatrix(1, 0).determinant(), 25.);
+        assert_eq!(m.minor(1, 0), 25.);
         assert_eq!(m.minor(1, 0), m.submatrix(1, 0).determinant());
     }
 
@@ -754,10 +758,10 @@ mod test {
             vec![6., -1., 5.],
         ]);
 
-        assert_eq!(m.minor(0, 0), -12);
-        assert_eq!(m.cofactor(0, 0), -12);
-        assert_eq!(m.minor(1, 0), 25);
-        assert_eq!(m.cofactor(1, 0), -25);
+        assert_eq!(m.minor(0, 0), -12.);
+        assert_eq!(m.cofactor(0, 0), -12.);
+        assert_eq!(m.minor(1, 0), 25.);
+        assert_eq!(m.cofactor(1, 0), -25.);
     }
 
     #[test]
@@ -769,10 +773,10 @@ mod test {
             vec![2., 6., 4.],
         ]);
 
-        assert_eq!(m.cofactor(0, 0), 56);
-        assert_eq!(m.cofactor(0, 1), 12);
-        assert_eq!(m.cofactor(0, 2), -46);
-        assert_eq!(m.determinant(), -196);
+        assert_eq!(m.cofactor(0, 0), 56.);
+        assert_eq!(m.cofactor(0, 1), 12.);
+        assert_eq!(m.cofactor(0, 2), -46.);
+        assert_eq!(m.determinant(), -196.);
     }
 
     #[test]
@@ -785,11 +789,11 @@ mod test {
             vec![-6., 7., 7., -9.],
         ]);
 
-        assert_eq!(m.cofactor(0, 0), 690);
-        assert_eq!(m.cofactor(0, 1), 447);
-        assert_eq!(m.cofactor(0, 2), 210);
-        assert_eq!(m.cofactor(0, 3), 51);
-        assert_eq!(m.determinant(), -4071);
+        assert_eq!(m.cofactor(0, 0), 690.);
+        assert_eq!(m.cofactor(0, 1), 447.);
+        assert_eq!(m.cofactor(0, 2), 210.);
+        assert_eq!(m.cofactor(0, 3), 51.);
+        assert_eq!(m.determinant(), -4071.);
     }
 
     #[test]
@@ -802,7 +806,7 @@ mod test {
             vec![9., 1., 7., -6.],
         ]);
 
-        assert_eq!(m.determinant(), -2120);
+        assert_eq!(m.determinant(), -2120.);
         assert_eq!(m.is_invertible(), true);
     }
 
@@ -816,7 +820,7 @@ mod test {
             vec![0., 0., 0., 0.],
         ]);
 
-        assert_eq!(m.determinant(), 0);
+        assert_eq!(m.determinant(), 0.);
         assert_eq!(m.is_invertible(), false);
     }
 
@@ -832,10 +836,10 @@ mod test {
 
         let n = m.inverse();
 
-        assert_eq!(m.determinant(), 532);
-        assert_eq!(m.cofactor(2, 3), -160);
+        assert_eq!(m.determinant(), 532.);
+        assert_eq!(m.cofactor(2, 3), -160.);
         assert_eq!(n[(3, 2)], -160. / 532.);
-        assert_eq!(m.cofactor(3, 2), 105);
+        assert_eq!(m.cofactor(3, 2), 105.);
         assert_eq!(n[(2, 3)], 105. / 532.);
 
         let expected_n: Matrix = SquareMatrix::from_nested_vec(vec![

@@ -99,4 +99,14 @@ mod test {
         );
         assert_eq!(full_quarter * p, Point::new(0., 0., 1.));
     }
+
+    #[test]
+    fn the_inverse_of_an_x_rotation_rotates_in_the_opposite_direction() {
+        let p = Point::new(0., 1., 0.);
+        let half_quarter_inverse = rotation_x(std::f64::consts::PI / 4.).inverse();
+        assert_eq!(
+            half_quarter_inverse * p,
+            Point::new(0., 2_f64.sqrt() / 2., -2_f64.sqrt() / 2.)
+        );
+    }
 }
