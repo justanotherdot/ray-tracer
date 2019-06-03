@@ -295,6 +295,40 @@ impl Mul<Point> for Matrix {
 }
 
 #[cfg(test)]
+mod properties {
+    use super::*;
+    use proptest::prelude::*;
+
+    // These tests are generally ignored as they can be slow
+    // on non-release builds.
+    proptest! {
+        #[test]
+        fn prop_matrix_mul_with_identity_is_commutative(
+            v in any::<Vec<f64>>().prop_filter(
+                "Vecs for 4x4 matrices",
+                |v| v.len() == 4*4 || v.len() == 3*3 || v.len() == 2*2)) {
+            let m: Matrix = SquareMatrix::from_vec(v);
+            assert_eq!(
+                &matrix_mul(&m, &m.identity()),
+                &matrix_mul(&m.identity(), &m)
+            );
+        }
+
+        #[test]
+        fn prop_matrix_mul_with_identity_is_involutive(
+            v in any::<Vec<f64>>().prop_filter(
+                "Vecs for 4x4 matrices",
+                |v| v.len() == 4*4 || v.len() == 3*3 || v.len() == 2*2)) {
+            let m: Matrix = SquareMatrix::from_vec(v);
+            assert_eq!(
+                &matrix_mul(&m.identity(), &m),
+                &m
+            );
+        }
+    }
+}
+
+#[cfg(test)]
 mod test {
     use super::*;
     use crate::coordinate::*;
@@ -590,6 +624,21 @@ mod test {
         ]);
 
         assert_eq!(&matrix_mul(&m, &m.identity()), &m);
+    }
+
+    #[test]
+    fn multiplying_a_matrix_by_the_identity_matrix_is_commutative() {
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 2., 3., 4.],
+            vec![5., 6., 7., 8.],
+            vec![9., 8., 7., 6.],
+            vec![5., 4., 3., 2.],
+        ]);
+
+        assert_eq!(
+            &matrix_mul(&m, &m.identity()),
+            &matrix_mul(&m.identity(), &m)
+        );
     }
 
     #[test]

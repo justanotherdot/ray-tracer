@@ -20,6 +20,20 @@ pub fn scaling(x: f64, y: f64, z: f64) -> Matrix {
     m
 }
 
+pub fn rotation_x(r: f64) -> Matrix {
+    let mut m = Matrix::empty(4, 4).identity();
+
+    let cos_r = r.cos();
+    let sin_r = r.sin();
+
+    m[(1, 1)] = cos_r;
+    m[(1, 2)] = -sin_r;
+    m[(2, 1)] = sin_r;
+    m[(2, 2)] = cos_r;
+
+    m
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -72,5 +86,17 @@ mod test {
         let transform = scaling(-1., 1., 1.);
         let p = Point::new(2., 3., 4.);
         assert_eq!(transform.inverse() * p, Point::new(-2., 3., 4.));
+    }
+
+    #[test]
+    fn rotating_a_point_around_the_x_axis() {
+        let p = Point::new(0., 1., 0.);
+        let half_quarter = rotation_x(std::f64::consts::PI / 4.);
+        let full_quarter = rotation_x(std::f64::consts::PI / 2.);
+        assert_eq!(
+            half_quarter * p,
+            Point::new(0., 2_f64.sqrt() / 2., 2_f64.sqrt() / 2.)
+        );
+        assert_eq!(full_quarter * p, Point::new(0., 0., 1.));
     }
 }
