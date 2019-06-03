@@ -62,6 +62,19 @@ pub fn rotation_z(r: f64) -> Matrix {
     m
 }
 
+pub fn shearing(xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Matrix {
+    let mut m = Matrix::empty(4, 4).identity();
+
+    m[(0, 1)] = xy;
+    m[(0, 2)] = xz;
+    m[(1, 0)] = yx;
+    m[(1, 2)] = yz;
+    m[(2, 0)] = zx;
+    m[(2, 1)] = zy;
+
+    m
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -160,5 +173,53 @@ mod test {
             Point::new(-2_f64.sqrt() / 2., 2_f64.sqrt() / 2., 0.)
         );
         assert_eq!(full_quarter * p, Point::new(-1., 0., 0.));
+    }
+
+    #[test]
+    fn a_shearing_transformation_moves_x_in_proportion_to_y() {
+        let transform = shearing(1., 0., 0., 0., 0., 0.);
+        let p = Point::new(2., 3., 4.);
+
+        assert_eq!(transform * p, Point::new(5., 3., 4.));
+    }
+
+    #[test]
+    fn a_shearing_transformation_moves_x_in_proportion_to_z() {
+        let transform = shearing(0., 1., 0., 0., 0., 0.);
+        let p = Point::new(2., 3., 4.);
+
+        assert_eq!(transform * p, Point::new(6., 3., 4.));
+    }
+
+    #[test]
+    fn a_shearing_transformation_moves_y_in_proportion_to_x() {
+        let transform = shearing(0., 0., 1., 0., 0., 0.);
+        let p = Point::new(2., 3., 4.);
+
+        assert_eq!(transform * p, Point::new(2., 5., 4.));
+    }
+
+    #[test]
+    fn a_shearing_transformation_moves_y_in_proportion_to_z() {
+        let transform = shearing(0., 0., 0., 1., 0., 0.);
+        let p = Point::new(2., 3., 4.);
+
+        assert_eq!(transform * p, Point::new(2., 7., 4.));
+    }
+
+    #[test]
+    fn a_shearing_transformation_moves_z_in_proportion_to_x() {
+        let transform = shearing(0., 0., 0., 0., 1., 0.);
+        let p = Point::new(2., 3., 4.);
+
+        assert_eq!(transform * p, Point::new(2., 3., 6.));
+    }
+
+    #[test]
+    fn a_shearing_transformation_moves_z_in_proportion_to_y() {
+        let transform = shearing(0., 0., 0., 0., 0., 1.);
+        let p = Point::new(2., 3., 4.);
+
+        assert_eq!(transform * p, Point::new(2., 3., 7.));
     }
 }
