@@ -25,6 +25,8 @@ where
     })
 }
 
+// TODO: const generics would be really handy here
+// to generalize the MxN lengths at the type level.
 #[derive(Debug, Clone)]
 pub struct Matrix {
     #[allow(dead_code)]
