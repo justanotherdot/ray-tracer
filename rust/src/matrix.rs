@@ -79,6 +79,9 @@ impl IdentityMatrix for Matrix {
     }
 }
 
+// TODO This should be turned into a simple newtype struct. That allows us to state the constraint
+// of having square matrices clearly in type signatures, and people must always use the smart
+// constructors as they won't be able to construct them directly.
 pub trait SquareMatrix {
     fn from_vec(vec: Vec<f64>) -> Self;
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
@@ -245,6 +248,8 @@ pub fn matrix_mul(a: &Matrix, b: &Matrix) -> Matrix {
 }
 
 // n.b. This is just a hack to potentially avoid a lot of costly allocations.
+// also, it would normally be expected to hand in `a` as the same matrix as `m`
+// which I'm not sure bodes well for the borrow checker? Worth a try.
 pub fn matrix_mul_mut(a: &Matrix, b: &Matrix, m: &mut Matrix) {
     let (num_rows, num_cols) = a.dims;
 
