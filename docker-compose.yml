@@ -1,4 +1,5 @@
-version: "3"
+# TODO Should upgrade this to 3.
+version: "2"
 services:
     rust_stable_ci:
       image: "rust:latest"
