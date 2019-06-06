@@ -25,6 +25,8 @@ where
     })
 }
 
+// TODO: const generics would be really handy here
+// to generalize the MxN lengths at the type level.
 #[derive(Debug, Clone)]
 pub struct Matrix {
     #[allow(dead_code)]
@@ -77,15 +79,18 @@ impl IdentityMatrix for Matrix {
     }
 }
 
+// TODO This should be turned into a simple newtype struct. That allows us to state the constraint
+// of having square matrices clearly in type signatures, and people must always use the smart
+// constructors as they won't be able to construct them directly.
 pub trait SquareMatrix {
     fn from_vec(vec: Vec<f64>) -> Self;
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
     fn dim(&self) -> usize;
     fn transpose(&self) -> Self;
-    fn determinant(&self) -> i64;
+    fn determinant(&self) -> f64;
     fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
-    fn minor(&self, exc_row: usize, exc_col: usize) -> i64;
-    fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64;
+    fn minor(&self, exc_row: usize, exc_col: usize) -> f64;
+    fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64;
     fn is_invertible(&self) -> bool;
     fn inverse(&self) -> Self;
 }
@@ -129,7 +134,7 @@ impl SquareMatrix for Matrix {
         m
     }
 
-    fn determinant(&self) -> i64 {
+    fn determinant(&self) -> f64 {
         let m = self;
         if m.dim() == 2 {
             let a = m[(0, 0)];
@@ -137,11 +142,11 @@ impl SquareMatrix for Matrix {
             let c = m[(1, 0)];
             let d = m[(1, 1)];
 
-            (a * d - b * c).round() as i64
+            (a * d - b * c)
         } else {
-            let mut det = 0;
+            let mut det = 0.;
             for col in 0..m.dim() {
-                det += (m[(0, col)] as i64) * m.cofactor(0, col);
+                det += m[(0, col)] * m.cofactor(0, col);
             }
             det
         }
@@ -171,18 +176,22 @@ impl SquareMatrix for Matrix {
         m
     }
 
-    fn minor(&self, exc_row: usize, exc_col: usize) -> i64 {
+    fn minor(&self, exc_row: usize, exc_col: usize) -> f64 {
         let submatrix = self.submatrix(exc_row, exc_col);
         submatrix.determinant()
     }
 
-    fn cofactor(&self, exc_row: usize, exc_col: usize) -> i64 {
-        let factor = if (exc_row + exc_col) % 2 == 1 { -1 } else { 1 };
+    fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64 {
+        let factor = if (exc_row + exc_col) % 2 == 1 {
+            -1.0
+        } else {
+            1.0
+        };
         factor * self.minor(exc_row, exc_col)
     }
 
     fn is_invertible(&self) -> bool {
-        self.determinant() != 0
+        self.determinant() != 0.
     }
 
     fn inverse(&self) -> Self {
@@ -239,6 +248,8 @@ pub fn matrix_mul(a: &Matrix, b: &Matrix) -> Matrix {
 }
 
 // n.b. This is just a hack to potentially avoid a lot of costly allocations.
+// also, it would normally be expected to hand in `a` as the same matrix as `m`
+// which I'm not sure bodes well for the borrow checker? Worth a try.
 pub fn matrix_mul_mut(a: &Matrix, b: &Matrix, m: &mut Matrix) {
     let (num_rows, num_cols) = a.dims;
 
@@ -289,6 +300,40 @@ impl Mul<Point> for Matrix {
         }
         p.w = 1.0;
         p
+    }
+}
+
+#[cfg(test)]
+mod properties {
+    use super::*;
+    use proptest::prelude::*;
+
+    // These tests are generally ignored as they can be slow
+    // on non-release builds.
+    proptest! {
+        #[test] //#[ignored]
+        fn prop_matrix_mul_with_identity_is_commutative(
+            v in any::<Vec<f64>>().prop_filter(
+                "Vecs for 4x4 matrices",
+                |v| v.len() == 4*4 || v.len() == 3*3 || v.len() == 2*2)) {
+            let m: Matrix = SquareMatrix::from_vec(v);
+            assert_eq!(
+                &matrix_mul(&m, &m.identity()),
+                &matrix_mul(&m.identity(), &m)
+            );
+        }
+
+        #[test] //#[ignored]
+        fn prop_matrix_mul_with_identity_is_involutive(
+            v in any::<Vec<f64>>().prop_filter(
+                "Vecs for 4x4 matrices",
+                |v| v.len() == 4*4 || v.len() == 3*3 || v.len() == 2*2)) {
+            let m: Matrix = SquareMatrix::from_vec(v);
+            assert_eq!(
+                &matrix_mul(&m.identity(), &m),
+                &m
+            );
+        }
     }
 }
 
@@ -591,6 +636,21 @@ mod test {
     }
 
     #[test]
+    fn multiplying_a_matrix_by_the_identity_matrix_is_commutative() {
+        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+            vec![1., 2., 3., 4.],
+            vec![5., 6., 7., 8.],
+            vec![9., 8., 7., 6.],
+            vec![5., 4., 3., 2.],
+        ]);
+
+        assert_eq!(
+            &matrix_mul(&m, &m.identity()),
+            &matrix_mul(&m.identity(), &m)
+        );
+    }
+
+    #[test]
     fn multiplying_matrices_mutably() {
         let m: Matrix = SquareMatrix::from_nested_vec(vec![
             vec![1., 2., 3., 4.],
@@ -639,7 +699,7 @@ mod test {
             vec![-3., 2.],
         ]);
 
-        assert_eq!(m.determinant(), 17);
+        assert_eq!(m.determinant(), 17.);
     }
 
     #[test]
@@ -689,8 +749,8 @@ mod test {
             vec![6., -1., 5.],
         ]);
 
-        assert_eq!(m.submatrix(1, 0).determinant(), 25);
-        assert_eq!(m.minor(1, 0), 25);
+        assert_eq!(m.submatrix(1, 0).determinant(), 25.);
+        assert_eq!(m.minor(1, 0), 25.);
         assert_eq!(m.minor(1, 0), m.submatrix(1, 0).determinant());
     }
 
@@ -703,10 +763,10 @@ mod test {
             vec![6., -1., 5.],
         ]);
 
-        assert_eq!(m.minor(0, 0), -12);
-        assert_eq!(m.cofactor(0, 0), -12);
-        assert_eq!(m.minor(1, 0), 25);
-        assert_eq!(m.cofactor(1, 0), -25);
+        assert_eq!(m.minor(0, 0), -12.);
+        assert_eq!(m.cofactor(0, 0), -12.);
+        assert_eq!(m.minor(1, 0), 25.);
+        assert_eq!(m.cofactor(1, 0), -25.);
     }
 
     #[test]
@@ -718,10 +778,10 @@ mod test {
             vec![2., 6., 4.],
         ]);
 
-        assert_eq!(m.cofactor(0, 0), 56);
-        assert_eq!(m.cofactor(0, 1), 12);
-        assert_eq!(m.cofactor(0, 2), -46);
-        assert_eq!(m.determinant(), -196);
+        assert_eq!(m.cofactor(0, 0), 56.);
+        assert_eq!(m.cofactor(0, 1), 12.);
+        assert_eq!(m.cofactor(0, 2), -46.);
+        assert_eq!(m.determinant(), -196.);
     }
 
     #[test]
@@ -734,11 +794,11 @@ mod test {
             vec![-6., 7., 7., -9.],
         ]);
 
-        assert_eq!(m.cofactor(0, 0), 690);
-        assert_eq!(m.cofactor(0, 1), 447);
-        assert_eq!(m.cofactor(0, 2), 210);
-        assert_eq!(m.cofactor(0, 3), 51);
-        assert_eq!(m.determinant(), -4071);
+        assert_eq!(m.cofactor(0, 0), 690.);
+        assert_eq!(m.cofactor(0, 1), 447.);
+        assert_eq!(m.cofactor(0, 2), 210.);
+        assert_eq!(m.cofactor(0, 3), 51.);
+        assert_eq!(m.determinant(), -4071.);
     }
 
     #[test]
@@ -751,7 +811,7 @@ mod test {
             vec![9., 1., 7., -6.],
         ]);
 
-        assert_eq!(m.determinant(), -2120);
+        assert_eq!(m.determinant(), -2120.);
         assert_eq!(m.is_invertible(), true);
     }
 
@@ -765,7 +825,7 @@ mod test {
             vec![0., 0., 0., 0.],
         ]);
 
-        assert_eq!(m.determinant(), 0);
+        assert_eq!(m.determinant(), 0.);
         assert_eq!(m.is_invertible(), false);
     }
 
@@ -781,10 +841,10 @@ mod test {
 
         let n = m.inverse();
 
-        assert_eq!(m.determinant(), 532);
-        assert_eq!(m.cofactor(2, 3), -160);
+        assert_eq!(m.determinant(), 532.);
+        assert_eq!(m.cofactor(2, 3), -160.);
         assert_eq!(n[(3, 2)], -160. / 532.);
-        assert_eq!(m.cofactor(3, 2), 105);
+        assert_eq!(m.cofactor(3, 2), 105.);
         assert_eq!(n[(2, 3)], 105. / 532.);
 
         let expected_n: Matrix = SquareMatrix::from_nested_vec(vec![
