@@ -311,7 +311,8 @@ mod properties {
     // These tests are generally ignored as they can be slow
     // on non-release builds.
     proptest! {
-        #[test] //#[ignored]
+        #[test]
+        #[ignore]
         fn prop_matrix_mul_with_identity_is_commutative(
             v in any::<Vec<f64>>().prop_filter(
                 "Vecs for 4x4 matrices",
@@ -323,7 +324,8 @@ mod properties {
             );
         }
 
-        #[test] //#[ignored]
+        #[test]
+        #[ignore]
         fn prop_matrix_mul_with_identity_is_involutive(
             v in any::<Vec<f64>>().prop_filter(
                 "Vecs for 4x4 matrices",
