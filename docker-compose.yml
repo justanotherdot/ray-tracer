@@ -1,0 +1,14 @@
+version: "3.6"
+services:
+    rust_stable_ci:
+      image: "rust:latest"
+      user: "${BUILDKITE_AGENT_UID}:${BUILDKITE_AGENT_GID}"
+      working_dir: /build
+      volumes:
+        - "$PWD:/build"
+    rust_nightly_ci:
+      image: "rustlang/rust:nightly"
+      user: "${BUILDKITE_AGENT_UID}:${BUILDKITE_AGENT_GID}"
+      working_dir: /build
+      volumes:
+        - "$PWD:/build"

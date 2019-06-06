@@ -1,0 +1,12 @@
+steps:
+  - label: "Rust: stable"
+    command: "cd rust; cargo build --verbose; cargo test --verbose"
+    plugins:
+      - docker-compose#v3.0.3:
+          run: rust_stable_ci
+
+  - label: "Rust: nightly"
+    command: "cd rust; cargo build --verbose; cargo test --verbose"
+    plugins:
+      - docker-compose#v3.0.3:
+          run: rust_nightly_ci
