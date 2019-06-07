@@ -1,4 +1,8 @@
 use crate::coordinate::{Point, Vector};
+use crate::naive_cmp::naive_approx_equal_float;
+use std::cmp::PartialEq;
+use std::ops::Index;
+use std::rc::Rc;
 
 pub struct Ray {
     origin: Point,
@@ -19,11 +23,7 @@ impl Ray {
     }
 
     pub fn position(&self, time: f64) -> Point {
-        // TODO It would be worth using direct functions here
-        // that take refs instead of the move semantics that
-        // operations take.
-        let dir2 = self.direction.clone() * time;
-        self.origin.clone() + dir2
+        self.origin + self.direction * time
     }
 }
 
@@ -32,16 +32,36 @@ impl Ray {
 // ids. A static hashmap is a horrible idea.
 // TODO: This needs a custom PartialEq with our naive cmp fn.
 // Since we will directly or indirectly compare against f64 again.
-#[derive(PartialEq)]
+// TODO: Remove this clone?
+#[derive(PartialEq, Debug, Clone)]
 pub struct Sphere {
     id: u64,
 }
 
-#[derive(PartialEq)]
+#[allow(unused_macros)]
+macro_rules! intersections {
+    ($($e:expr),*) => {{
+        {
+            let xs = vec![
+                $($e),*
+            ];
+            Intersections(xs)
+        }
+    }};
+}
+
+// TODO This ought to be called Intersction and Intersection should
+// be called something else.
+#[derive(Debug)]
 pub struct Intersection {
-    // TODO: Should this just be a two-tuple?
-    //       Is the points of intersection always 0-2?
-    points: Vec<f64>,
+    pub t: f64,
+    pub object: Rc<Sphere>, // TODO: ought to be Shape.
+}
+
+impl PartialEq for Intersection {
+    fn eq(&self, other: &Self) -> bool {
+        self.object == other.object && naive_approx_equal_float(&self.t, &other.t)
+    }
 }
 
 impl Sphere {
@@ -49,7 +69,7 @@ impl Sphere {
         Sphere { id }
     }
 
-    pub fn intersect(self, r: Ray) -> Intersection {
+    pub fn intersect(&self, r: Ray) -> Intersections {
         let sphere_to_ray = r.origin().clone() - Point::new(0., 0., 0.);
 
         let a = r.direction().clone().dot(&r.direction().clone());
@@ -58,25 +78,42 @@ impl Sphere {
 
         let discriminant = b.powf(2.) - 4. * a * c;
 
-        let points = vec![];
         if discriminant < 0.0 {
-            Intersection { points }
+            Intersections(vec![])
         } else {
             let t1 = ((-b) - discriminant.sqrt()) / (2. * a);
             let t2 = ((-b) + discriminant.sqrt()) / (2. * a);
-            let points = vec![t1, t2];
-            Intersection { points }
+            let i1 = Intersection::new(t1, &self);
+            let i2 = Intersection::new(t2, &self);
+            intersections![i1, i2]
         }
     }
 }
 
 impl Intersection {
-    pub fn count(&self) -> usize {
-        self.points.len()
+    // TODO Generalise object to Shape eventually.
+    pub fn new(t: f64, object: &Sphere) -> Self {
+        let object = Rc::new(object.clone());
+        Intersection { t, object }
     }
+}
 
-    pub fn get(&self, ix: usize) -> Option<f64> {
-        self.points.get(ix).map(|v| *v)
+pub struct Intersections(Vec<Intersection>);
+
+impl Intersections {
+    pub fn count(&self) -> usize {
+        self.0.len()
+    }
+}
+
+// TODO: The book uses index syntax toget the fst and snd elements
+// of the intersections but from what I can tell there is only two
+// intersections.
+impl Index<usize> for Intersections {
+    type Output = Intersection;
+
+    fn index(&self, ix: usize) -> &Self::Output {
+        &self.0[ix]
     }
 }
 
@@ -110,8 +147,8 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs.get(0), Some(4.0));
-        assert_eq!(xs.get(1), Some(6.0));
+        assert_eq!(xs[0].t, 4.0);
+        assert_eq!(xs[1].t, 6.0);
     }
 
     #[test]
@@ -121,8 +158,8 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs.get(0), Some(5.0));
-        assert_eq!(xs.get(1), Some(5.0));
+        assert_eq!(xs[0].t, 5.0);
+        assert_eq!(xs[1].t, 5.0);
     }
 
     #[test]
@@ -132,7 +169,6 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 0);
-        assert_eq!(xs.get(0), None);
     }
 
     #[test]
@@ -142,8 +178,8 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs.get(0), Some(-1.0));
-        assert_eq!(xs.get(1), Some(1.0));
+        assert_eq!(xs[0].t, -1.0);
+        assert_eq!(xs[1].t, 1.0);
     }
 
     #[test]
@@ -153,7 +189,37 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs.get(0), Some(-6.0));
-        assert_eq!(xs.get(1), Some(-4.0));
+        assert_eq!(xs[0].t, -6.0);
+        assert_eq!(xs[1].t, -4.0);
+    }
+
+    #[test]
+    fn an_intersectoin_encapsulates_t_and_object() {
+        let s = Sphere::new(0);
+        let i = Intersection::new(3.5, &s);
+        assert_eq!(i.t, 3.5);
+        assert_eq!(*i.object, s);
+    }
+
+    #[test]
+    fn aggregating_intersections() {
+        let s = Sphere::new(0);
+        let i1 = Intersection::new(1., &s);
+        let i2 = Intersection::new(2., &s);
+        let xs = intersections![i1, i2];
+        assert_eq!(xs.count(), 2);
+        assert_eq!(xs[0].t, 1.);
+        assert_eq!(xs[1].t, 2.);
+    }
+
+    #[test]
+    fn intersect_sets_the_object_on_the_intersection() {
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
+        let s = Sphere::new(0);
+        let xs = s.intersect(r);
+        let rc = Rc::new(s.clone());
+        assert_eq!(xs.count(), 2);
+        assert_eq!(xs[0].object, rc);
+        assert_eq!(xs[1].object, rc);
     }
 }

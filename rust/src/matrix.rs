@@ -1,4 +1,5 @@
 use crate::coordinate::{Point, Vector};
+use crate::naive_cmp::naive_approx_equal_float;
 use smallvec::*;
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut, Mul};
@@ -42,16 +43,6 @@ impl Matrix {
             data: smallvec![0.0; num_rows*num_cols],
         }
     }
-}
-
-fn naive_approx_equal_float(x: &f64, y: &f64) -> bool {
-    const F64_EPSILON: f64 = 0.00001;
-    // TODO Needs checks for NaN and ±∞ etc.
-    if *x == std::f64::NAN && *y == std::f64::NAN {
-        return false;
-    }
-
-    (x - y).abs() < F64_EPSILON
 }
 
 impl PartialEq for Matrix {
