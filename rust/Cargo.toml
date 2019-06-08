@@ -7,3 +7,5 @@ edition = "2018"
 [dependencies]
 smallvec = "0.6.9"
 proptest = "0.9.3"
+# This is useful for ray intersections, but should be compared against smallvec
+#binary-heap-plus = "0.2.0"

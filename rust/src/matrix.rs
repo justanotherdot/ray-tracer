@@ -33,7 +33,7 @@ pub struct Matrix {
     #[allow(dead_code)]
     dims: (usize, usize),
     #[allow(dead_code)]
-    data: SmallVec<[f64; 0]>,
+    data: SmallVec<[f64; 16]>,
 }
 
 impl Matrix {

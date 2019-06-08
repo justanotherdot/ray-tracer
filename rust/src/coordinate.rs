@@ -457,11 +457,6 @@ mod test {
     }
 
     #[test]
-    fn naive_approx_equal_float_works() {
-        assert!(naive_approx_equal_float(0.15 + 0.15, 0.1 + 0.2));
-    }
-
-    #[test]
     fn subtracting_two_points() {
         let a1 = Point::new(3., 2., 1.);
         let a2 = Point::new(5., 6., 7.);

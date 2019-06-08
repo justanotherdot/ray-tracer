@@ -1,7 +1,7 @@
 use crate::coordinate::{Point, Vector};
-use crate::naive_cmp::naive_approx_equal_float;
-use std::cmp::PartialEq;
-use std::ops::Index;
+use crate::naive_cmp;
+use smallvec::*;
+use std::cmp::{Eq, Ord, Ordering, PartialEq};
 use std::rc::Rc;
 
 pub struct Ray {
@@ -33,26 +33,25 @@ impl Ray {
 // TODO: This needs a custom PartialEq with our naive cmp fn.
 // Since we will directly or indirectly compare against f64 again.
 // TODO: Remove this clone?
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub struct Sphere {
     id: u64,
 }
 
 #[allow(unused_macros)]
 macro_rules! intersections {
-    ($($e:expr),*) => {{
+    ($($e:expr),*) => {
         {
-            let xs = vec![
-                $($e),*
-            ];
+            let mut xs = smallvec![$($e),*];
+            xs.sort();
             Intersections(xs)
         }
-    }};
+    };
 }
 
 // TODO This ought to be called Intersction and Intersection should
 // be called something else.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Intersection {
     pub t: f64,
     pub object: Rc<Sphere>, // TODO: ought to be Shape.
@@ -60,7 +59,27 @@ pub struct Intersection {
 
 impl PartialEq for Intersection {
     fn eq(&self, other: &Self) -> bool {
-        self.object == other.object && naive_approx_equal_float(&self.t, &other.t)
+        self.object == other.object && naive_cmp::naive_approx_equal_float(&self.t, &other.t)
+    }
+}
+
+impl Eq for Intersection {}
+
+impl PartialOrd for Intersection {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(
+            self.object
+                .cmp(&other.object)
+                .then_with(|| naive_cmp::naive_approx_float_cmp(&self.t, &other.t)),
+        )
+    }
+}
+
+impl Ord for Intersection {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.object
+            .cmp(&other.object)
+            .then_with(|| naive_cmp::naive_approx_float_cmp(&self.t, &other.t))
     }
 }
 
@@ -79,7 +98,7 @@ impl Sphere {
         let discriminant = b.powf(2.) - 4. * a * c;
 
         if discriminant < 0.0 {
-            Intersections(vec![])
+            intersections![]
         } else {
             let t1 = ((-b) - discriminant.sqrt()) / (2. * a);
             let t2 = ((-b) + discriminant.sqrt()) / (2. * a);
@@ -98,22 +117,19 @@ impl Intersection {
     }
 }
 
-pub struct Intersections(Vec<Intersection>);
+pub struct Intersections(SmallVec<[Intersection; 2]>);
 
 impl Intersections {
     pub fn count(&self) -> usize {
         self.0.len()
     }
-}
 
-// TODO: The book uses index syntax toget the fst and snd elements
-// of the intersections but from what I can tell there is only two
-// intersections.
-impl Index<usize> for Intersections {
-    type Output = Intersection;
+    pub fn hit(&self) -> Option<&Intersection> {
+        self.0.iter().filter(|i| i.t >= 0.).nth(0)
+    }
 
-    fn index(&self, ix: usize) -> &Self::Output {
-        &self.0[ix]
+    pub fn get(&self, ix: usize) -> Option<&Intersection> {
+        self.0.iter().nth(ix)
     }
 }
 
@@ -147,8 +163,8 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs[0].t, 4.0);
-        assert_eq!(xs[1].t, 6.0);
+        assert_eq!(xs.get(0).unwrap().t, 4.0);
+        assert_eq!(xs.get(1).unwrap().t, 6.0);
     }
 
     #[test]
@@ -158,8 +174,8 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs[0].t, 5.0);
-        assert_eq!(xs[1].t, 5.0);
+        assert_eq!(xs.get(0).unwrap().t, 5.0);
+        assert_eq!(xs.get(1).unwrap().t, 5.0);
     }
 
     #[test]
@@ -178,8 +194,8 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs[0].t, -1.0);
-        assert_eq!(xs[1].t, 1.0);
+        assert_eq!(xs.get(0).unwrap().t, -1.0);
+        assert_eq!(xs.get(1).unwrap().t, 1.0);
     }
 
     #[test]
@@ -189,8 +205,8 @@ mod test {
         let s = Sphere::new(0);
         let xs = s.intersect(r);
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs[0].t, -6.0);
-        assert_eq!(xs[1].t, -4.0);
+        assert_eq!(xs.get(0).unwrap().t, -6.0);
+        assert_eq!(xs.get(1).unwrap().t, -4.0);
     }
 
     #[test]
@@ -208,8 +224,8 @@ mod test {
         let i2 = Intersection::new(2., &s);
         let xs = intersections![i1, i2];
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs[0].t, 1.);
-        assert_eq!(xs[1].t, 2.);
+        assert_eq!(xs.get(0).unwrap().t, 1.);
+        assert_eq!(xs.get(1).unwrap().t, 2.);
     }
 
     #[test]
@@ -219,7 +235,49 @@ mod test {
         let xs = s.intersect(r);
         let rc = Rc::new(s.clone());
         assert_eq!(xs.count(), 2);
-        assert_eq!(xs[0].object, rc);
-        assert_eq!(xs[1].object, rc);
+        assert_eq!(xs.get(0).unwrap().object, rc);
+        assert_eq!(xs.get(1).unwrap().object, rc);
+    }
+
+    #[test]
+    fn the_hit_when_all_intersections_have_positive_t() {
+        let s = Sphere::new(0);
+        let i1 = Intersection::new(1., &s);
+        let i2 = Intersection::new(2., &s);
+        let xs = intersections![i1.clone(), i2.clone()];
+        let i = xs.hit();
+        assert_eq!(i, Some(&i1));
+    }
+
+    #[test]
+    fn the_hit_when_some_intersections_have_negative_t() {
+        let s = Sphere::new(0);
+        let i1 = Intersection::new(-1., &s);
+        let i2 = Intersection::new(1., &s);
+        let xs = intersections![i2.clone(), i1.clone()];
+        let i = xs.hit();
+        assert_eq!(i, Some(&i2));
+    }
+
+    #[test]
+    fn the_hit_when_all_intersections_have_negative_t() {
+        let s = Sphere::new(0);
+        let i1 = Intersection::new(-2., &s);
+        let i2 = Intersection::new(-1., &s);
+        let xs = intersections![i2.clone(), i1.clone()];
+        let i = xs.hit();
+        assert_eq!(i, None);
+    }
+
+    #[test]
+    fn the_hit_is_always_the_lowest_nonnegative_insersection() {
+        let s = Sphere::new(0);
+        let i1 = Intersection::new(5., &s);
+        let i2 = Intersection::new(7., &s);
+        let i3 = Intersection::new(-3., &s);
+        let i4 = Intersection::new(2., &s);
+        let xs = intersections![i1.clone(), i2.clone(), i3.clone(), i4.clone()];
+        let i = xs.hit();
+        assert_eq!(i, Some(&i4));
     }
 }
