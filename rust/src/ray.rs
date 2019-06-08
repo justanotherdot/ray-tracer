@@ -1,4 +1,5 @@
 use crate::coordinate::{Point, Vector};
+use crate::matrix::{IdentityMatrix, Matrix, SquareMatrix};
 use crate::naive_cmp;
 use smallvec::*;
 use std::cmp::{Eq, Ord, Ordering, PartialEq};
@@ -25,6 +26,13 @@ impl Ray {
     pub fn position(&self, time: f64) -> Point {
         self.origin + self.direction * time
     }
+
+    pub fn transform(&self, m: Matrix) -> Self {
+        Self {
+            origin: m.clone() * self.origin,
+            direction: m.clone() * self.direction,
+        }
+    }
 }
 
 // TODO: Possibly a `Shape` struct that shapes can be added onto?
@@ -33,9 +41,10 @@ impl Ray {
 // TODO: This needs a custom PartialEq with our naive cmp fn.
 // Since we will directly or indirectly compare against f64 again.
 // TODO: Remove this clone?
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Sphere {
-    id: u64,
+    pub id: u64,
+    pub transform: Matrix,
 }
 
 #[allow(unused_macros)]
@@ -67,28 +76,24 @@ impl Eq for Intersection {}
 
 impl PartialOrd for Intersection {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(
-            self.object
-                .cmp(&other.object)
-                .then_with(|| naive_cmp::naive_approx_float_cmp(&self.t, &other.t)),
-        )
+        Some(naive_cmp::naive_approx_float_cmp(&self.t, &other.t))
     }
 }
 
 impl Ord for Intersection {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.object
-            .cmp(&other.object)
-            .then_with(|| naive_cmp::naive_approx_float_cmp(&self.t, &other.t))
+        naive_cmp::naive_approx_float_cmp(&self.t, &other.t)
     }
 }
 
 impl Sphere {
     pub fn new(id: u64) -> Self {
-        Sphere { id }
+        let transform = Matrix::empty(4, 4).identity();
+        Sphere { id, transform }
     }
 
     pub fn intersect(&self, r: Ray) -> Intersections {
+        let r = r.transform(self.transform.inverse());
         let sphere_to_ray = r.origin().clone() - Point::new(0., 0., 0.);
 
         let a = r.direction().clone().dot(&r.direction().clone());
@@ -106,6 +111,10 @@ impl Sphere {
             let i2 = Intersection::new(t2, &self);
             intersections![i1, i2]
         }
+    }
+
+    pub fn set_transform(&mut self, m: Matrix) {
+        self.transform = m;
     }
 }
 
@@ -137,6 +146,7 @@ impl Intersections {
 mod test {
     use super::*;
     use crate::coordinate::*;
+    use crate::transformation::Transformation;
 
     #[test]
     fn creating_and_querying_a_ray() {
@@ -279,5 +289,60 @@ mod test {
         let xs = intersections![i1.clone(), i2.clone(), i3.clone(), i4.clone()];
         let i = xs.hit();
         assert_eq!(i, Some(&i4));
+    }
+
+    #[test]
+    fn translating_a_ray() {
+        let r = Ray::new(Point::new(1., 2., 3.), Vector::new(0., 1., 0.));
+        let m = Transformation::new().translate(3., 4., 5.).build();
+        let r2 = r.transform(m);
+        assert_eq!(r2.origin, Point::new(4., 6., 8.));
+        assert_eq!(r2.direction, Vector::new(0., 1., 0.));
+    }
+
+    #[test]
+    fn scaling_a_ray() {
+        let r = Ray::new(Point::new(1., 2., 3.), Vector::new(0., 1., 0.));
+        let m = Transformation::new().scale(2., 3., 4.).build();
+        let r2 = r.transform(m);
+        assert_eq!(r2.origin, Point::new(2., 6., 12.));
+        assert_eq!(r2.direction, Vector::new(0., 3., 0.));
+    }
+
+    #[test]
+    fn a_spheres_default_transformation() {
+        let s = Sphere::new(0);
+        let identity = Matrix::empty(4, 4).identity();
+        assert_eq!(s.transform, identity);
+    }
+
+    #[test]
+    fn changing_a_spheres_transformation() {
+        let mut s = Sphere::new(0);
+        let t = Transformation::new().translate(2., 3., 4.).build();
+        s.set_transform(t.clone());
+        assert_eq!(s.transform, t);
+    }
+
+    #[test]
+    fn intersecting_a_scaled_sphere_with_a_ray() {
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
+        let mut s = Sphere::new(0);
+        let t = Transformation::new().scale(2., 2., 2.).build();
+        s.set_transform(t.clone());
+        let xs = s.intersect(r);
+        assert_eq!(xs.count(), 2);
+        assert_eq!(xs.get(0).unwrap().t, 3.);
+        assert_eq!(xs.get(1).unwrap().t, 7.);
+    }
+
+    #[test]
+    fn intersecting_a_translated_sphere_with_a_ray() {
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
+        let mut s = Sphere::new(0);
+        let t = Transformation::new().translate(5., 0., 0.).build();
+        s.set_transform(t.clone());
+        let xs = s.intersect(r);
+        assert_eq!(xs.count(), 0);
     }
 }

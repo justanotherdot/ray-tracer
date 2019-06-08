@@ -36,6 +36,7 @@ pub struct Matrix {
     data: SmallVec<[f64; 16]>,
 }
 
+// TODO: Ought to have a Default impl with empty.
 impl Matrix {
     pub fn empty(num_rows: usize, num_cols: usize) -> Self {
         Matrix {
@@ -77,6 +78,7 @@ pub trait SquareMatrix {
     fn from_vec(vec: Vec<f64>) -> Self;
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
     fn dim(&self) -> usize;
+    fn empty(dim: usize) -> Self;
     fn transpose(&self) -> Self;
     fn determinant(&self) -> f64;
     fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
@@ -89,6 +91,10 @@ pub trait SquareMatrix {
 impl SquareMatrix for Matrix {
     fn dim(&self) -> usize {
         self.dims.0
+    }
+
+    fn empty(dim: usize) -> Self {
+        Matrix::empty(dim, dim)
     }
 
     // TODO One day having instances of From for SquareMatrix
