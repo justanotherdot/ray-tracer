@@ -1,7 +1,7 @@
-use rust_ray_tracer::canvas::Canvas;
-use rust_ray_tracer::color::Color;
-use rust_ray_tracer::coordinate::{Point, Vector};
-use rust_ray_tracer::ppm::Ppm;
+use ray_tracer::canvas::Canvas;
+use ray_tracer::color::Color;
+use ray_tracer::coordinate::{Point, Vector};
+use ray_tracer::ppm::Ppm;
 use std::fs::File;
 use std::io::prelude::*;
 
