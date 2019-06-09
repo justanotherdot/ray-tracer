@@ -1,3 +1,5 @@
+use crate::naive_cmp::naive_approx_equal_float;
+
 #[derive(Debug, Clone)]
 pub struct Color {
     pub r: f64,
@@ -7,23 +9,10 @@ pub struct Color {
 
 impl std::cmp::PartialEq for Color {
     fn eq(&self, other: &Color) -> bool {
-        naive_approx_equal_float(self.r, other.r)
-            && naive_approx_equal_float(self.g, other.g)
-            && naive_approx_equal_float(self.b, other.b)
+        naive_approx_equal_float(&self.r, &other.r)
+            && naive_approx_equal_float(&self.g, &other.g)
+            && naive_approx_equal_float(&self.b, &other.b)
     }
-}
-
-// n.b.
-// This approximate equality is needed for Color, too,
-// In order to make the tests pass given in the book.
-fn naive_approx_equal_float(x: f64, y: f64) -> bool {
-    const F64_EPSILON: f64 = 0.00001;
-    // TODO Needs checks for NaN and ±∞ etc.
-    if x == std::f64::NAN && y == std::f64::NAN {
-        return false;
-    }
-
-    (x - y).abs() < F64_EPSILON
 }
 
 impl Color {

@@ -1,3 +1,4 @@
+use crate::naive_cmp::naive_approx_equal_float;
 use std::ops::{Index, IndexMut};
 
 // These really ought to be enums and probably mean we don't need `w`, but we'll see how it pans
@@ -34,28 +35,28 @@ impl Point {
 
 impl std::cmp::PartialEq<Vector> for Point {
     fn eq(&self, other: &Vector) -> bool {
-        naive_approx_equal_float(self.x, other.x)
-            && naive_approx_equal_float(self.y, other.y)
-            && naive_approx_equal_float(self.z, other.z)
-            && naive_approx_equal_float(self.w, other.w)
+        naive_approx_equal_float(&self.x, &other.x)
+            && naive_approx_equal_float(&self.y, &other.y)
+            && naive_approx_equal_float(&self.z, &other.z)
+            && naive_approx_equal_float(&self.w, &other.w)
     }
 }
 
 impl std::cmp::PartialEq<Point> for Vector {
     fn eq(&self, other: &Point) -> bool {
-        naive_approx_equal_float(self.x, other.x)
-            && naive_approx_equal_float(self.y, other.y)
-            && naive_approx_equal_float(self.z, other.z)
-            && naive_approx_equal_float(self.w, other.w)
+        naive_approx_equal_float(&self.x, &other.x)
+            && naive_approx_equal_float(&self.y, &other.y)
+            && naive_approx_equal_float(&self.z, &other.z)
+            && naive_approx_equal_float(&self.w, &other.w)
     }
 }
 
 impl PartialEq for Point {
     fn eq(&self, other: &Self) -> bool {
-        naive_approx_equal_float(self.x, other.x)
-            && naive_approx_equal_float(self.y, other.y)
-            && naive_approx_equal_float(self.z, other.z)
-            && naive_approx_equal_float(self.w, other.w)
+        naive_approx_equal_float(&self.x, &other.x)
+            && naive_approx_equal_float(&self.y, &other.y)
+            && naive_approx_equal_float(&self.z, &other.z)
+            && naive_approx_equal_float(&self.w, &other.w)
     }
 }
 
@@ -198,10 +199,10 @@ impl Vector {
 
 impl PartialEq for Vector {
     fn eq(&self, other: &Self) -> bool {
-        naive_approx_equal_float(self.x, other.x)
-            && naive_approx_equal_float(self.y, other.y)
-            && naive_approx_equal_float(self.z, other.z)
-            && naive_approx_equal_float(self.w, other.w)
+        naive_approx_equal_float(&self.x, &other.x)
+            && naive_approx_equal_float(&self.y, &other.y)
+            && naive_approx_equal_float(&self.z, &other.z)
+            && naive_approx_equal_float(&self.w, &other.w)
     }
 }
 
@@ -413,16 +414,6 @@ impl std::ops::Neg for Vector {
     }
 }
 
-fn naive_approx_equal_float(x: f64, y: f64) -> bool {
-    const F64_EPSILON: f64 = 0.00001;
-    // TODO Needs checks for NaN and ±∞ etc.
-    if x == std::f64::NAN && y == std::f64::NAN {
-        return false;
-    }
-
-    (x - y).abs() < F64_EPSILON
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -463,11 +454,6 @@ mod test {
 
         assert_eq!(&a3, &Vector::new(1., 1., 6.));
         assert_eq!(&Vector::new(1., 1., 6.), &a3);
-    }
-
-    #[test]
-    fn naive_approx_equal_float_works() {
-        assert!(naive_approx_equal_float(0.15 + 0.15, 0.1 + 0.2));
     }
 
     #[test]

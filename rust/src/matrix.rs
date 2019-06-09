@@ -1,4 +1,5 @@
 use crate::coordinate::{Point, Vector};
+use crate::naive_cmp::naive_approx_equal_float;
 use smallvec::*;
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut, Mul};
@@ -32,9 +33,10 @@ pub struct Matrix {
     #[allow(dead_code)]
     dims: (usize, usize),
     #[allow(dead_code)]
-    data: SmallVec<[f64; 0]>,
+    data: SmallVec<[f64; 16]>,
 }
 
+// TODO: Ought to have a Default impl with empty.
 impl Matrix {
     pub fn empty(num_rows: usize, num_cols: usize) -> Self {
         Matrix {
@@ -42,16 +44,6 @@ impl Matrix {
             data: smallvec![0.0; num_rows*num_cols],
         }
     }
-}
-
-fn naive_approx_equal_float(x: &f64, y: &f64) -> bool {
-    const F64_EPSILON: f64 = 0.00001;
-    // TODO Needs checks for NaN and ±∞ etc.
-    if *x == std::f64::NAN && *y == std::f64::NAN {
-        return false;
-    }
-
-    (x - y).abs() < F64_EPSILON
 }
 
 impl PartialEq for Matrix {
@@ -86,6 +78,7 @@ pub trait SquareMatrix {
     fn from_vec(vec: Vec<f64>) -> Self;
     fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
     fn dim(&self) -> usize;
+    fn empty(dim: usize) -> Self;
     fn transpose(&self) -> Self;
     fn determinant(&self) -> f64;
     fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
@@ -98,6 +91,10 @@ pub trait SquareMatrix {
 impl SquareMatrix for Matrix {
     fn dim(&self) -> usize {
         self.dims.0
+    }
+
+    fn empty(dim: usize) -> Self {
+        Matrix::empty(dim, dim)
     }
 
     // TODO One day having instances of From for SquareMatrix
@@ -311,7 +308,8 @@ mod properties {
     // These tests are generally ignored as they can be slow
     // on non-release builds.
     proptest! {
-        #[test] //#[ignored]
+        #[test]
+        #[ignore]
         fn prop_matrix_mul_with_identity_is_commutative(
             v in any::<Vec<f64>>().prop_filter(
                 "Vecs for 4x4 matrices",
@@ -323,7 +321,8 @@ mod properties {
             );
         }
 
-        #[test] //#[ignored]
+        #[test]
+        #[ignore]
         fn prop_matrix_mul_with_identity_is_involutive(
             v in any::<Vec<f64>>().prop_filter(
                 "Vecs for 4x4 matrices",
