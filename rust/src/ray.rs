@@ -35,6 +35,8 @@ impl Ray {
     }
 }
 
+// TODO: This needs some way ensuring that we don't have overlapping
+// ids on shapes. i.e. We should never have the same shape after `new`.
 // TODO: Possibly a `Shape` struct that shapes can be added onto?
 // that way we wind up with something a bit nicer for tracking distinct
 // ids. A static hashmap is a horrible idea.
