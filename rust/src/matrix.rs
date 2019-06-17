@@ -26,6 +26,7 @@ where
     })
 }
 
+// TODO: Would be handy ot have a nicer debug output for matrices.
 // TODO: const generics would be really handy here
 // to generalize the MxN lengths at the type level.
 #[derive(Debug, Clone)]
@@ -273,7 +274,9 @@ impl Mul<Vector> for Matrix {
     type Output = Vector;
 
     fn mul(self, rhs: Self::Output) -> Self::Output {
-        assert!(self.dims.1 == rhs.len());
+        assert!(self.dims.0 <= 4
+                self.dims.1 <= 4
+                rhs.len() <= 4);
         let mut v = Vector::new(0., 0., 0.);
         for row in 0..self.dims.0 {
             for col in 0..self.dims.1 {
@@ -288,7 +291,9 @@ impl Mul<Point> for Matrix {
     type Output = Point;
 
     fn mul(self, rhs: Self::Output) -> Self::Output {
-        assert!(self.dims.1 == rhs.len());
+        assert!(self.dims.0 <= 4
+                self.dims.1 <= 4
+                rhs.len() <= 4);
         let mut p = Point::new(0., 0., 0.);
         for row in 0..self.dims.0 {
             for col in 0..self.dims.1 {

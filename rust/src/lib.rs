@@ -5,4 +5,5 @@ pub mod matrix;
 pub mod naive_cmp;
 pub mod ppm;
 pub mod ray;
+pub mod shader;
 pub mod transformation;
