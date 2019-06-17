@@ -3,14 +3,10 @@ use crate::matrix::SquareMatrix;
 use crate::ray::Sphere;
 
 pub fn normal_at(s: Sphere, world_point: Point) -> Vector {
-    // TODO: Not sure why having this failed
-    // It's noted in the book that this is the ideal way.
-    //let inv_trans = s.transform.submatrix(3, 3).inverse();
-    let inv_trans = s.transform.inverse(); //.submatrix(3, 3);
-    let object_point = inv_trans.clone() * world_point;
+    let subm = s.transform.submatrix(3, 3);
+    let object_point = s.transform.inverse() * world_point;
     let object_normal = object_point - Point::new(0., 0., 0.);
-    let mut world_normal = inv_trans.transpose() * object_normal;
-    world_normal.w = 0.;
+    let world_normal = subm.inverse().transpose() * object_normal;
     world_normal.normalize()
 }
 
