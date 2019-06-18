@@ -54,6 +54,7 @@ impl Default for Material {
     }
 }
 
+// TODO: Put this as method on Sphere.
 pub fn normal_at(s: Sphere, world_point: Point) -> Vector {
     let subm = s.transform.submatrix(3, 3);
     let object_point = s.transform.inverse() * world_point;
@@ -62,10 +63,12 @@ pub fn normal_at(s: Sphere, world_point: Point) -> Vector {
     world_normal.normalize()
 }
 
+// TODO: Put this as method on Vector.
 pub fn reflect(incidence: Vector, normal: Vector) -> Vector {
     incidence - normal * 2. * incidence.dot(&normal)
 }
 
+// TODO: Put this as method on ... Material? PointLight?
 pub fn lighting(
     material: Material,
     light: PointLight,

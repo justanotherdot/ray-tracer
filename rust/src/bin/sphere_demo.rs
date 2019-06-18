@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 fn trace() -> Ppm {
-    let canvas_pixels = 100;
+    let canvas_pixels = 200;
     let wall_size = 7.0;
     let wall_z = 10.;
     let pixel_size = wall_size / canvas_pixels as f64;
