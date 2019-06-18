@@ -4,7 +4,7 @@ use crate::matrix::SquareMatrix;
 use crate::ray::Sphere;
 use std::default::Default;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct PointLight {
     position: Point,
     intensity: Color,
@@ -12,8 +12,7 @@ pub struct PointLight {
 
 // TODO: Rename this as Light?
 impl PointLight {
-    #[allow(dead_code)]
-    fn new(position: Point, intensity: Color) -> Self {
+    pub fn new(position: Point, intensity: Color) -> Self {
         Self {
             position,
             intensity,
@@ -23,11 +22,11 @@ impl PointLight {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Material {
-    color: Color,
-    ambient: f64,
-    diffuse: f64,
-    specular: f64,
-    shininess: f64,
+    pub color: Color,
+    pub ambient: f64,
+    pub diffuse: f64,
+    pub specular: f64,
+    pub shininess: f64,
 }
 
 impl Material {

@@ -7,9 +7,10 @@ use std::cmp::{Eq, Ord, Ordering, PartialEq};
 use std::default::Default;
 use std::rc::Rc;
 
+#[derive(Clone)]
 pub struct Ray {
-    origin: Point,
-    direction: Vector,
+    pub origin: Point,
+    pub direction: Vector,
 }
 
 impl Ray {
