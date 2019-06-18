@@ -1,13 +1,16 @@
 use crate::coordinate::{Point, Vector};
 use crate::matrix::{IdentityMatrix, Matrix, SquareMatrix};
 use crate::naive_cmp;
+use crate::shader::Material;
 use smallvec::*;
 use std::cmp::{Eq, Ord, Ordering, PartialEq};
+use std::default::Default;
 use std::rc::Rc;
 
+#[derive(Clone)]
 pub struct Ray {
-    origin: Point,
-    direction: Vector,
+    pub origin: Point,
+    pub direction: Vector,
 }
 
 impl Ray {
@@ -35,6 +38,8 @@ impl Ray {
     }
 }
 
+// TODO: This needs some way ensuring that we don't have overlapping
+// ids on shapes. i.e. We should never have the same shape after `new`.
 // TODO: Possibly a `Shape` struct that shapes can be added onto?
 // that way we wind up with something a bit nicer for tracking distinct
 // ids. A static hashmap is a horrible idea.
@@ -45,6 +50,7 @@ impl Ray {
 pub struct Sphere {
     pub id: u64,
     pub transform: Matrix,
+    pub material: Material,
 }
 
 #[allow(unused_macros)]
@@ -89,7 +95,12 @@ impl Ord for Intersection {
 impl Sphere {
     pub fn new(id: u64) -> Self {
         let transform = Matrix::empty(4, 4).identity();
-        Sphere { id, transform }
+        let material = Default::default();
+        Sphere {
+            id,
+            transform,
+            material,
+        }
     }
 
     pub fn intersect(&self, r: Ray) -> Intersections {
