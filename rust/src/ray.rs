@@ -1,8 +1,10 @@
 use crate::coordinate::{Point, Vector};
 use crate::matrix::{IdentityMatrix, Matrix, SquareMatrix};
 use crate::naive_cmp;
+use crate::shader::Material;
 use smallvec::*;
 use std::cmp::{Eq, Ord, Ordering, PartialEq};
+use std::default::Default;
 use std::rc::Rc;
 
 pub struct Ray {
@@ -47,6 +49,7 @@ impl Ray {
 pub struct Sphere {
     pub id: u64,
     pub transform: Matrix,
+    pub material: Material,
 }
 
 #[allow(unused_macros)]
@@ -91,7 +94,12 @@ impl Ord for Intersection {
 impl Sphere {
     pub fn new(id: u64) -> Self {
         let transform = Matrix::empty(4, 4).identity();
-        Sphere { id, transform }
+        let material = Default::default();
+        Sphere {
+            id,
+            transform,
+            material,
+        }
     }
 
     pub fn intersect(&self, r: Ray) -> Intersections {
