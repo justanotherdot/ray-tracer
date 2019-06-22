@@ -103,7 +103,7 @@ impl Sphere {
         }
     }
 
-    pub fn intersect(&self, r: Ray) -> Intersections {
+    pub fn intersect(&self, r: &Ray) -> Intersections {
         let r = r.transform(self.transform.inverse());
         let sphere_to_ray = r.origin().clone() - Point::new(0., 0., 0.);
 
@@ -137,9 +137,22 @@ impl Intersection {
     }
 }
 
-pub struct Intersections(SmallVec<[Intersection; 2]>);
+#[derive(Debug, Clone)]
+pub struct Intersections(SmallVec<[Intersection; 64]>);
 
 impl Intersections {
+    pub fn from_vec(v: Vec<Intersection>) -> Intersections {
+        let mut v1 = v.clone();
+        v1.sort();
+        Intersections(SmallVec::from_vec(v1))
+    }
+
+    pub fn from_smallvec(sv: SmallVec<[Intersection; 64]>) -> Intersections {
+        let mut sv1 = sv.clone();
+        sv1.sort();
+        Intersections(sv1)
+    }
+
     pub fn count(&self) -> usize {
         self.0.len()
     }
@@ -150,6 +163,19 @@ impl Intersections {
 
     pub fn get(&self, ix: usize) -> Option<&Intersection> {
         self.0.iter().nth(ix)
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<Intersection> {
+        self.0.iter()
+    }
+}
+
+impl IntoIterator for Intersections {
+    type Item = Intersection;
+    type IntoIter = smallvec::IntoIter<[Intersection; 64]>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -182,7 +208,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, 4.0);
         assert_eq!(xs.get(1).unwrap().t, 6.0);
@@ -193,7 +219,7 @@ mod test {
         let r = Ray::new(Point::new(0., 1., -5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, 5.0);
         assert_eq!(xs.get(1).unwrap().t, 5.0);
@@ -204,7 +230,7 @@ mod test {
         let r = Ray::new(Point::new(0., 2., -5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         assert_eq!(xs.count(), 0);
     }
 
@@ -213,7 +239,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., 0.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, -1.0);
         assert_eq!(xs.get(1).unwrap().t, 1.0);
@@ -224,7 +250,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., 5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, -6.0);
         assert_eq!(xs.get(1).unwrap().t, -4.0);
@@ -253,7 +279,7 @@ mod test {
     fn intersect_sets_the_object_on_the_intersection() {
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
         let s = Sphere::new(0);
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         let rc = Rc::new(s.clone());
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().object, rc);
@@ -341,7 +367,7 @@ mod test {
         let mut s = Sphere::new(0);
         let t = Transformation::new().scale(2., 2., 2.).build();
         s.set_transform(t.clone());
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, 3.);
         assert_eq!(xs.get(1).unwrap().t, 7.);
@@ -353,7 +379,7 @@ mod test {
         let mut s = Sphere::new(0);
         let t = Transformation::new().translate(5., 0., 0.).build();
         s.set_transform(t.clone());
-        let xs = s.intersect(r);
+        let xs = s.intersect(&r);
         assert_eq!(xs.count(), 0);
     }
 }
