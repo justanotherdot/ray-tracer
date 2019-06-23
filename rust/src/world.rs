@@ -1,10 +1,11 @@
 use crate::color::Color;
-use crate::coordinate::Point;
-use crate::ray::{Intersections, Ray, Sphere};
+use crate::coordinate::{Point, Vector};
+use crate::ray::{Intersection, Intersections, Ray, Sphere};
 use crate::shader::PointLight;
 use crate::transformation::Transformation;
 use smallvec::*;
 use std::default::Default;
+use std::rc::Rc;
 
 pub struct World {
     objects: SmallVec<[Sphere; 64]>,
@@ -53,6 +54,30 @@ pub fn intersect_world(w: World, r: Ray) -> Intersections {
     Intersections::from_smallvec(is)
 }
 
+pub struct PreComp {
+    pub t: f64,
+    pub object: Rc<Sphere>, // TODO: Should be Shape.
+    pub point: Point,
+    pub eyev: Vector,
+    pub normalv: Vector,
+}
+
+pub fn prepare_computations(intersection: Intersection, ray: Ray) -> PreComp {
+    let t = intersection.t;
+    let object = intersection.object;
+    let point = ray.position(t);
+    let eyev = -ray.direction;
+    let normalv = object.normal_at(point);
+
+    PreComp {
+        t,
+        object,
+        point,
+        eyev,
+        normalv,
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -97,5 +122,19 @@ mod test {
         assert_eq!(xs.get(1).unwrap().t, 4.5);
         assert_eq!(xs.get(2).unwrap().t, 5.5);
         assert_eq!(xs.get(3).unwrap().t, 6.0);
+    }
+
+    #[test]
+    fn precomputing_the_state_of_an_intersection() {
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
+        let shape = Sphere::new(0);
+        let i = Intersection::new(4., &shape);
+
+        let comps = prepare_computations(i.clone(), r);
+        assert_eq!(comps.t, i.t);
+        assert_eq!(comps.object, i.object);
+        assert_eq!(comps.point, Point::new(0., 0., -1.));
+        assert_eq!(comps.eyev, Vector::new(0., 0., -1.));
+        assert_eq!(comps.normalv, Vector::new(0., 0., -1.));
     }
 }

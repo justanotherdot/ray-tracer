@@ -165,6 +165,10 @@ impl IndexMut<usize> for Point {
     }
 }
 
+pub fn reflect(incidence: Vector, normal: Vector) -> Vector {
+    incidence - normal * 2. * incidence.dot(&normal)
+}
+
 #[allow(dead_code)]
 impl Vector {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
@@ -174,6 +178,10 @@ impl Vector {
             z,
             w: VECTOR_MAGIC,
         }
+    }
+
+    pub fn reflect(self, normal: Vector) -> Vector {
+        reflect(self, normal)
     }
 
     pub fn magnitude(&self) -> f64 {

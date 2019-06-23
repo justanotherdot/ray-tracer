@@ -38,6 +38,7 @@ impl Ray {
     }
 }
 
+// TODO: This ought to live in a `shape` module.
 // TODO: This needs some way ensuring that we don't have overlapping
 // ids on shapes. i.e. We should never have the same shape after `new`.
 // TODO: Possibly a `Shape` struct that shapes can be added onto?
@@ -92,6 +93,14 @@ impl Ord for Intersection {
     }
 }
 
+pub fn normal_at(s: &Sphere, world_point: Point) -> Vector {
+    let subm = s.transform.submatrix(3, 3);
+    let object_point = s.transform.inverse() * world_point;
+    let object_normal = object_point - Point::new(0., 0., 0.);
+    let world_normal = subm.inverse().transpose() * object_normal;
+    world_normal.normalize()
+}
+
 impl Sphere {
     pub fn new(id: u64) -> Self {
         let transform = Matrix::empty(4, 4).identity();
@@ -126,6 +135,10 @@ impl Sphere {
 
     pub fn set_transform(&mut self, m: Matrix) {
         self.transform = m;
+    }
+
+    pub fn normal_at(&self, world_point: Point) -> Vector {
+        normal_at(self, world_point)
     }
 }
 

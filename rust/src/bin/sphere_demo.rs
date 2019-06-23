@@ -37,7 +37,7 @@ fn trace() -> Ppm {
                 let hit = xs.hit().unwrap();
                 let point = r.clone().position(hit.t);
                 let hit_object: &Sphere = hit.object.borrow();
-                let normal = shader::normal_at(hit_object.clone(), point);
+                let normal = hit_object.normal_at(point);
                 let eye = -(r).direction;
 
                 let color = shader::lighting(s.material.clone(), light.clone(), point, eye, normal);
