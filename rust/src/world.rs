@@ -87,11 +87,24 @@ pub fn prepare_computations(intersection: Intersection, ray: Ray) -> PreComp {
     }
 }
 
+pub fn shade_hit(w: World, c: PreComp) -> Color {
+    // If we wanted to, we could support multiple light sources
+    // by summing the `lighting` result off every source.
+    match w.light {
+        Some(light) => c
+            .object
+            .material
+            .lighting(light, c.point, c.eyev, c.normalv),
+        None => panic!("error: shade_hit called but no light source found"),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::coordinate::Vector;
     use crate::ray::Ray;
+    use crate::shader::PointLight;
 
     #[test]
     fn creating_a_world() {
@@ -168,5 +181,33 @@ mod test {
         assert_eq!(comps.eyev, Vector::new(0., 0., -1.));
         assert_eq!(comps.inside, true);
         assert_eq!(comps.normalv, Vector::new(0., 0., -1.));
+    }
+
+    #[test]
+    fn shading_an_intersection() {
+        let w: World = Default::default();
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
+        let shape = w.objects.get(0).unwrap();
+        let i = Intersection::new(4., shape);
+        let comps = prepare_computations(i, r);
+        let c = shade_hit(w, comps);
+
+        assert_eq!(c, Color::new(0.38066, 0.47583, 0.2855));
+    }
+
+    #[test]
+    fn shading_an_intersection_from_the_inside() {
+        let mut w: World = Default::default();
+        w.light = Some(PointLight::new(
+            Point::new(0., 0.25, 0.),
+            Color::new(1., 1., 1.),
+        ));
+        let r = Ray::new(Point::new(0., 0., 0.), Vector::new(0., 0., 1.));
+        let shape = w.objects.get(1).unwrap();
+        let i = Intersection::new(0.5, shape);
+        let comps = prepare_computations(i, r);
+        let c = shade_hit(w, comps);
+
+        assert_eq!(c, Color::new(0.90498, 0.90498, 0.90498));
     }
 }

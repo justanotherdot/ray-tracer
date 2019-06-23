@@ -43,14 +43,25 @@ impl std::ops::Sub for Color {
     }
 }
 
+pub fn mul_color_f64(lhs: &Color, rhs: f64) -> Color {
+    let r = lhs.r * rhs;
+    let g = lhs.g * rhs;
+    let b = lhs.b * rhs;
+    Color { r, g, b }
+}
+
+pub fn mul_color(lhs: &Color, rhs: &Color) -> Color {
+    let r = lhs.r * rhs.r;
+    let g = lhs.g * rhs.g;
+    let b = lhs.b * rhs.b;
+    Color { r, g, b }
+}
+
 impl std::ops::Mul<f64> for Color {
     type Output = Self;
 
     fn mul(self, rhs: f64) -> Self {
-        let r = self.r * rhs;
-        let g = self.g * rhs;
-        let b = self.b * rhs;
-        Color { r, g, b }
+        mul_color_f64(&self, rhs)
     }
 }
 
@@ -58,10 +69,7 @@ impl std::ops::Mul for Color {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        let r = self.r * rhs.r;
-        let g = self.g * rhs.g;
-        let b = self.b * rhs.b;
-        Color { r, g, b }
+        mul_color(&self, &rhs)
     }
 }
 

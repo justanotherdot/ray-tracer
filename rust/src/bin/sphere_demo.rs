@@ -3,9 +3,7 @@ use ray_tracer::color::Color;
 use ray_tracer::coordinate::Point;
 use ray_tracer::ppm::Ppm;
 use ray_tracer::ray::{Ray, Sphere};
-use ray_tracer::shader;
 use ray_tracer::shader::PointLight;
-use std::borrow::Borrow;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -36,11 +34,10 @@ fn trace() -> Ppm {
             if xs.hit().is_some() {
                 let hit = xs.hit().unwrap();
                 let point = r.clone().position(hit.t);
-                let hit_object: &Sphere = hit.object.borrow();
-                let normal = hit_object.normal_at(point);
+                let normal = hit.object.normal_at(point);
                 let eye = -(r).direction;
 
-                let color = shader::lighting(s.material.clone(), light.clone(), point, eye, normal);
+                let color = s.material.lighting(light.clone(), point, eye, normal);
                 canvas.write_pixel(x, y, color);
             }
         }
