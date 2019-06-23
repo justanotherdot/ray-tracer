@@ -19,6 +19,10 @@ impl Color {
     pub fn new(r: f64, g: f64, b: f64) -> Self {
         Color { r, g, b }
     }
+
+    pub fn mul_f64(&self, rhs: f64) -> Self {
+        mul_color_f64(self, rhs)
+    }
 }
 
 impl std::ops::Add for Color {

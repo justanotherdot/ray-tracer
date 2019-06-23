@@ -37,7 +37,7 @@ fn trace() -> Ppm {
                 let normal = hit.object.normal_at(point);
                 let eye = -(r).direction;
 
-                let color = s.material.lighting(light.clone(), point, eye, normal);
+                let color = s.material.lighting(&light, &point, &eye, &normal);
                 canvas.write_pixel(x, y, color);
             }
         }

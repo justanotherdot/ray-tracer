@@ -18,6 +18,18 @@ impl World {
         let light = None;
         World { objects, light }
     }
+
+    pub fn intersect(&self, r: &Ray) -> Intersections {
+        intersect_world(self, r)
+    }
+
+    pub fn shade_hit(&self, c: &PreComp) -> Color {
+        shade_hit(self, c)
+    }
+
+    pub fn color_at(&self, r: &Ray) -> Color {
+        color_at(self, r)
+    }
 }
 
 impl Default for World {
@@ -40,7 +52,8 @@ impl Default for World {
     }
 }
 
-pub fn intersect_world(w: World, r: Ray) -> Intersections {
+// TODO: Make this a method off World.
+pub fn intersect_world(w: &World, r: &Ray) -> Intersections {
     let sv = smallvec![];
     let mut is = w.objects.iter().fold(sv, |mut acc, o| {
         o.intersect(&r).into_iter().for_each(|intersection| {
@@ -54,6 +67,14 @@ pub fn intersect_world(w: World, r: Ray) -> Intersections {
     Intersections::from_smallvec(is)
 }
 
+pub fn color_at(w: &World, r: &Ray) -> Color {
+    let is = w.intersect(r);
+    match is.hit() {
+        Some(hit) => shade_hit(w, &prepare_computations(&hit, &r)),
+        None => Color::new(0., 0., 0.),
+    }
+}
+
 pub struct PreComp {
     pub t: f64,
     pub object: Rc<Sphere>, // TODO: Should be Shape.
@@ -63,9 +84,9 @@ pub struct PreComp {
     pub inside: bool,
 }
 
-pub fn prepare_computations(intersection: Intersection, ray: Ray) -> PreComp {
+pub fn prepare_computations(intersection: &Intersection, ray: &Ray) -> PreComp {
     let t = intersection.t;
-    let object = intersection.object;
+    let object = intersection.object.clone();
     let point = ray.position(t);
     let eyev = -ray.direction;
     let mut normalv = object.normal_at(point);
@@ -87,14 +108,14 @@ pub fn prepare_computations(intersection: Intersection, ray: Ray) -> PreComp {
     }
 }
 
-pub fn shade_hit(w: World, c: PreComp) -> Color {
-    // If we wanted to, we could support multiple light sources
-    // by summing the `lighting` result off every source.
+pub fn shade_hit(w: &World, c: &PreComp) -> Color {
+    // N.B. If we wanted to, we could support multiple light
+    // sources by summing each `lighting` result.
     match w.light {
-        Some(light) => c
+        Some(ref light) => c
             .object
             .material
-            .lighting(light, c.point, c.eyev, c.normalv),
+            .lighting(light, &c.point, &c.eyev, &c.normalv),
         None => panic!("error: shade_hit called but no light source found"),
     }
 }
@@ -137,7 +158,7 @@ mod test {
         let w: World = Default::default();
 
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
-        let xs = intersect_world(w, r);
+        let xs = intersect_world(&w, &r);
 
         assert_eq!(xs.count(), 4);
         assert_eq!(xs.get(0).unwrap().t, 4.0);
@@ -151,7 +172,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
         let shape = Sphere::new(0);
         let i = Intersection::new(4., &shape);
-        let comps = prepare_computations(i.clone(), r);
+        let comps = prepare_computations(&i, &r);
 
         assert_eq!(comps.t, i.t);
         assert_eq!(comps.object, i.object);
@@ -165,7 +186,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
         let shape = Sphere::new(0);
         let i = Intersection::new(4., &shape);
-        let comps = prepare_computations(i, r);
+        let comps = prepare_computations(&i, &r);
 
         assert_eq!(comps.inside, false);
     }
@@ -175,7 +196,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., 0.), Vector::new(0., 0., 1.));
         let shape = Sphere::new(0);
         let i = Intersection::new(1., &shape);
-        let comps = prepare_computations(i, r);
+        let comps = prepare_computations(&i, &r);
 
         assert_eq!(comps.point, Point::new(0., 0., 1.));
         assert_eq!(comps.eyev, Vector::new(0., 0., -1.));
@@ -189,8 +210,8 @@ mod test {
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
         let shape = w.objects.get(0).unwrap();
         let i = Intersection::new(4., shape);
-        let comps = prepare_computations(i, r);
-        let c = shade_hit(w, comps);
+        let comps = prepare_computations(&i, &r);
+        let c = shade_hit(&w, &comps);
 
         assert_eq!(c, Color::new(0.38066, 0.47583, 0.2855));
     }
@@ -205,9 +226,40 @@ mod test {
         let r = Ray::new(Point::new(0., 0., 0.), Vector::new(0., 0., 1.));
         let shape = w.objects.get(1).unwrap();
         let i = Intersection::new(0.5, shape);
-        let comps = prepare_computations(i, r);
-        let c = shade_hit(w, comps);
+        let comps = prepare_computations(&i, &r);
+        let c = shade_hit(&w, &comps);
 
         assert_eq!(c, Color::new(0.90498, 0.90498, 0.90498));
+    }
+
+    #[test]
+    fn the_color_when_a_ray_misses() {
+        let w: World = Default::default();
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 1., 0.));
+        let c = w.color_at(&r);
+
+        assert_eq!(c, Color::new(0., 0., 0.));
+    }
+
+    #[test]
+    fn the_color_when_a_ray_hits() {
+        let w: World = Default::default();
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
+        let c = w.color_at(&r);
+
+        assert_eq!(c, Color::new(0.38066, 0.47583, 0.2855));
+    }
+
+    #[test]
+    fn the_color_with_an_intersection_behind_the_ray() {
+        let w: World = Default::default();
+        let mut outer = w.objects.get(0).unwrap().clone();
+        outer.material.ambient = 1.;
+        let inner = w.objects.get(1).unwrap().clone();
+        outer.material.ambient = 1.;
+        let r = Ray::new(Point::new(0., 0., 0.75), Vector::new(0., 0., -1.));
+        let c = w.color_at(&r);
+
+        assert_eq!(&c, &inner.material.color);
     }
 }
