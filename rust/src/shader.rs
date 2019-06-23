@@ -63,7 +63,6 @@ impl Default for Material {
     }
 }
 
-// TODO: Put this as method on ... Material? PointLight?
 pub fn lighting(
     material: &Material,
     light: &PointLight,

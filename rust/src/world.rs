@@ -252,13 +252,21 @@ mod test {
 
     #[test]
     fn the_color_with_an_intersection_behind_the_ray() {
-        let w: World = Default::default();
-        let mut outer = w.objects.get(0).unwrap().clone();
-        outer.material.ambient = 1.;
-        let inner = w.objects.get(1).unwrap().clone();
-        outer.material.ambient = 1.;
+        let mut w: World = Default::default();
+
+        {
+            let outer = &mut w.objects[0];
+            outer.material.ambient = 1.;
+        }
+        {
+            let inner = &mut w.objects[1];
+            inner.material.ambient = 1.;
+        }
+
         let r = Ray::new(Point::new(0., 0., 0.75), Vector::new(0., 0., -1.));
         let c = w.color_at(&r);
+
+        let inner = &w.objects[1];
 
         assert_eq!(&c, &inner.material.color);
     }
