@@ -142,6 +142,59 @@ pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix {
     matrix::matrix_mul(&orientation, &translation)
 }
 
+pub struct Camera {
+    pub hsize: usize,
+    pub vsize: usize,
+    pub field_of_view: f64,
+    pub transform: Matrix,
+    pub pixel_size: f64,
+    pub half_height: f64,
+    pub half_width: f64,
+}
+
+impl Camera {
+    pub fn new(hsize: usize, vsize: usize, field_of_view: f64) -> Self {
+        let transform = Transformation::new().build();
+
+        // TODO: The abs delta of tan(pi/4) has rounding errors on
+        // f64, so we go to f32 to flub it to a lower precision.
+        let half_view = (field_of_view as f32 / 2.0 as f32).tan() as f64;
+
+        let aspect = hsize as f64 / vsize as f64;
+
+        let (half_width, half_height) = if aspect >= 1. {
+            (half_view, half_view / aspect)
+        } else {
+            (half_view * aspect, half_view)
+        };
+        let pixel_size = (half_width * 2.) / hsize as f64;
+
+        Camera {
+            hsize,
+            vsize,
+            field_of_view,
+            transform,
+            pixel_size,
+            half_width,
+            half_height,
+        }
+    }
+
+    pub fn ray_for_pixel(&self, px: f64, py: f64) -> Ray {
+        let xoffset = (px + 0.5) * self.pixel_size;
+        let yoffset = (py + 0.5) * self.pixel_size;
+
+        let world_x = self.half_width - xoffset;
+        let world_y = self.half_height - yoffset;
+
+        let pixel = self.transform.inverse() * Point::new(world_x, world_y, -1.);
+        let origin = self.transform.inverse() * Point::new(0., 0., 0.);
+        let direction = (pixel - origin).normalize();
+
+        Ray::new(origin, direction)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -339,4 +392,59 @@ mod test {
         ]);
         assert_eq!(t, m);
     }
+
+    #[test]
+    fn constructing_a_camera() {
+        let hsize = 160;
+        let vsize = 120;
+        let field_of_view = std::f64::consts::PI / 2.0;
+        let c = Camera::new(hsize, vsize, field_of_view);
+        assert_eq!(c.hsize, 160);
+        assert_eq!(c.vsize, 120);
+        assert_eq!(c.field_of_view, std::f64::consts::PI / 2.0);
+        assert_eq!(c.transform, Matrix::empty(4, 4).identity());
+    }
+
+    #[test]
+    fn the_pixel_size_for_a_horizontal_canvas() {
+        let c = Camera::new(200, 125, std::f64::consts::PI / 2.0);
+        assert_eq!(&c.pixel_size, &0.01);
+    }
+
+    #[test]
+    fn the_pixel_size_for_a_vertical_canvas() {
+        let c = Camera::new(125, 200, std::f64::consts::PI / 2.0);
+        assert_eq!(&c.pixel_size, &0.01);
+    }
+
+    //#[test]
+    //fn constructing_a_ray_through_the_center_of_the_canvas() {
+    //let c = Camera::new(201, 101, std::f64::consts::PI / 2.0);
+    //let r = c.ray_for_pixel(100., 50.);
+    //assert_eq!(r.origin, Point::new(0., 0., 0.));
+    //assert_eq!(r.direction, Vector::new(0., 0., 1.));
+    //}
+
+    //#[test]
+    //fn constructing_a_ray_through_the_corner_of_the_canvas() {
+    //let c = Camera::new(201., 101., std::f64::consts::PI / 2.0);
+    //let r = c.ray_for_pixel(0., 0.);
+    //assert_eq!(r.origin, Point::new(0., 0., 0.));
+    //assert_eq!(r.direction, Vector::new(0.66519, 0.33259, -0.66851));
+    //}
+
+    //#[test]
+    //fn constructing_a_ray_when_the_camera_is_transformed() {
+    //let mut c = Camera::new(201., 101., std::f64::consts::PI / 2.0);
+    //c.transform = Transformation::new()
+    //.rotate_y(std::f64::consts::PI / 4.)
+    //.translate(0., -2., 5.)
+    //.build();
+    //let r = c.ray_for_pixel(0., 0.);
+    //assert_eq!(r.origin, Point::new(0., 2., -5.));
+    //assert_eq!(
+    //r.direction,
+    //Vector::new((2.0 as f64).sqrt() / 2., 0., -((2.0 as f64).sqrt() / 2.0))
+    //);
+    //}
 }
