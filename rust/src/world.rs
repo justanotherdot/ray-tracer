@@ -1,5 +1,7 @@
 use crate::color::Color;
 use crate::coordinate::{Point, Vector};
+use crate::matrix;
+use crate::matrix::{Matrix, SquareMatrix};
 use crate::ray::{Intersection, Intersections, Ray, Sphere};
 use crate::shader::PointLight;
 use crate::transformation::Transformation;
@@ -120,10 +122,31 @@ pub fn shade_hit(w: &World, c: &PreComp) -> Color {
     }
 }
 
+pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix {
+    let forward = (to - from).normalize();
+    let upn = up.normalize();
+    let left = forward.cross(&upn);
+    let true_up = left.cross(&forward);
+    #[rustfmt::skip]
+    let orientation: Matrix = SquareMatrix::from_nested_vec(vec![
+        vec![left.x,       left.y,     left.z,    0.],
+        vec![true_up.x,    true_up.y,  true_up.z, 0.],
+        vec![-forward.x,  -forward.y, -forward.z, 0.],
+        vec![0.,           0.,         0.,        1.],
+    ]);
+
+    let translation: Matrix = Transformation::new()
+        .translate(-from.x, -from.y, -from.z)
+        .build();
+
+    matrix::matrix_mul(&orientation, &translation)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::coordinate::Vector;
+    use crate::matrix::{IdentityMatrix, Matrix, SquareMatrix};
     use crate::ray::Ray;
     use crate::shader::PointLight;
 
@@ -269,5 +292,51 @@ mod test {
         let inner = &w.objects[1];
 
         assert_eq!(&c, &inner.material.color);
+    }
+
+    #[test]
+    fn the_transformation_matrix_for_the_default_orientation() {
+        let from = Point::new(0., 0., 0.);
+        let to = Point::new(0., 0., -1.);
+        let up = Vector::new(0., 1., 0.);
+        let t = view_transform(from, to, up);
+        let m = Matrix::empty(4, 4).identity();
+        assert_eq!(t, m);
+    }
+
+    #[test]
+    fn a_view_transformation_matrix_looking_in_positive_z_direction() {
+        let from = Point::new(0., 0., 0.);
+        let to = Point::new(0., 0., 1.);
+        let up = Vector::new(0., 1., 0.);
+        let t = view_transform(from, to, up);
+        let m = Transformation::new().scale(-1., 1., -1.).build();
+        assert_eq!(t, m);
+    }
+
+    #[test]
+    fn the_view_transformation_moves_the_world() {
+        let from = Point::new(0., 0., 8.);
+        let to = Point::new(0., 0., 0.);
+        let up = Vector::new(0., 1., 0.);
+        let t = view_transform(from, to, up);
+        let m = Transformation::new().translate(0., 0., -8.).build();
+        assert_eq!(t, m);
+    }
+
+    #[test]
+    fn an_arbitrary_view_transformation() {
+        let from = Point::new(1., 3., 2.);
+        let to = Point::new(4., -2., 8.);
+        let up = Vector::new(1., 1., 0.);
+        let t = view_transform(from, to, up);
+        #[rustfmt::skip]
+        let m = Matrix::from_nested_vec(vec![
+            vec![-0.50709, 0.50709,  0.67612, -2.36643],
+            vec![ 0.76772, 0.60609,  0.12122, -2.82843],
+            vec![-0.35857, 0.59761, -0.71714,  0.00000],
+            vec![ 0.00000, 0.00000,  0.00000,  1.00000],
+        ]);
+        assert_eq!(t, m);
     }
 }
