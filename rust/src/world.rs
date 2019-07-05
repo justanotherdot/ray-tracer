@@ -417,34 +417,34 @@ mod test {
         assert_eq!(&c.pixel_size, &0.01);
     }
 
-    //#[test]
-    //fn constructing_a_ray_through_the_center_of_the_canvas() {
-    //let c = Camera::new(201, 101, std::f64::consts::PI / 2.0);
-    //let r = c.ray_for_pixel(100., 50.);
-    //assert_eq!(r.origin, Point::new(0., 0., 0.));
-    //assert_eq!(r.direction, Vector::new(0., 0., 1.));
-    //}
+    #[test]
+    fn constructing_a_ray_through_the_center_of_the_canvas() {
+        let c = Camera::new(201, 101, std::f64::consts::PI / 2.0);
+        let r = c.ray_for_pixel(100., 50.);
+        assert_eq!(r.origin, Point::new(0., 0., 0.));
+        assert_eq!(r.direction, Vector::new(0., 0., -1.));
+    }
 
-    //#[test]
-    //fn constructing_a_ray_through_the_corner_of_the_canvas() {
-    //let c = Camera::new(201., 101., std::f64::consts::PI / 2.0);
-    //let r = c.ray_for_pixel(0., 0.);
-    //assert_eq!(r.origin, Point::new(0., 0., 0.));
-    //assert_eq!(r.direction, Vector::new(0.66519, 0.33259, -0.66851));
-    //}
+    #[test]
+    fn constructing_a_ray_through_the_corner_of_the_canvas() {
+        let c = Camera::new(201, 101, std::f64::consts::PI / 2.0);
+        let r = c.ray_for_pixel(0., 0.);
+        assert_eq!(r.origin, Point::new(0., 0., 0.));
+        assert_eq!(r.direction, Vector::new(0.66519, 0.33259, -0.66851));
+    }
 
-    //#[test]
-    //fn constructing_a_ray_when_the_camera_is_transformed() {
-    //let mut c = Camera::new(201., 101., std::f64::consts::PI / 2.0);
-    //c.transform = Transformation::new()
-    //.rotate_y(std::f64::consts::PI / 4.)
-    //.translate(0., -2., 5.)
-    //.build();
-    //let r = c.ray_for_pixel(0., 0.);
-    //assert_eq!(r.origin, Point::new(0., 2., -5.));
-    //assert_eq!(
-    //r.direction,
-    //Vector::new((2.0 as f64).sqrt() / 2., 0., -((2.0 as f64).sqrt() / 2.0))
-    //);
-    //}
+    #[test]
+    fn constructing_a_ray_when_the_camera_is_transformed() {
+        let mut c = Camera::new(201, 101, std::f64::consts::PI / 2.0);
+        c.transform = Transformation::new()
+            .translate(0., -2., 5.)
+            .rotate_y(std::f64::consts::PI / 4.)
+            .build();
+        let r = c.ray_for_pixel(100., 50.);
+        assert_eq!(r.origin, Point::new(0., 2., -5.));
+        assert_eq!(
+            r.direction,
+            Vector::new((2.0 as f64).sqrt() / 2., 0., -((2.0 as f64).sqrt() / 2.0))
+        );
+    }
 }
