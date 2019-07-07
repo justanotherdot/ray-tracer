@@ -11,8 +11,8 @@ use std::default::Default;
 use std::rc::Rc;
 
 pub struct World {
-    objects: SmallVec<[Sphere; 64]>,
-    light: Option<PointLight>,
+    pub objects: SmallVec<[Sphere; 64]>,
+    pub light: Option<PointLight>,
 }
 
 impl World {
