@@ -31,6 +31,10 @@ impl Point {
     pub fn len(&self) -> usize {
         4
     }
+
+    pub fn mul_f64(&self, rhs: f64) -> Self {
+        mul_point_f64(self, rhs)
+    }
 }
 
 impl std::cmp::PartialEq<Vector> for Point {
@@ -165,6 +169,10 @@ impl IndexMut<usize> for Point {
     }
 }
 
+pub fn reflect(incidence: &Vector, normal: &Vector) -> Vector {
+    incidence.sub(&(normal.mul_f64(2.) * incidence.dot(&normal)))
+}
+
 #[allow(dead_code)]
 impl Vector {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
@@ -174,6 +182,10 @@ impl Vector {
             z,
             w: VECTOR_MAGIC,
         }
+    }
+
+    pub fn reflect(&self, normal: &Vector) -> Vector {
+        reflect(self, normal)
     }
 
     pub fn magnitude(&self) -> f64 {
@@ -194,6 +206,14 @@ impl Vector {
 
     pub fn len(&self) -> usize {
         4
+    }
+
+    pub fn sub(&self, rhs: &Self) -> Self {
+        sub_vector_by_ref(self, rhs)
+    }
+
+    pub fn mul_f64(&self, rhs: f64) -> Self {
+        mul_vec_f64_by_ref(self, rhs)
     }
 }
 
@@ -245,16 +265,20 @@ impl std::ops::Add for Vector {
     }
 }
 
+pub fn sub_point_by_ref(lhs: &Point, rhs: &Point) -> Vector {
+    Vector {
+        x: lhs.x - rhs.x,
+        y: lhs.y - rhs.y,
+        z: lhs.z - rhs.z,
+        w: lhs.w - rhs.w,
+    }
+}
+
 impl std::ops::Sub for Point {
     type Output = Vector;
 
     fn sub(self, rhs: Point) -> Self::Output {
-        Vector {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-            w: self.w - rhs.w,
-        }
+        sub_point_by_ref(&self, &rhs)
     }
 }
 
@@ -271,16 +295,20 @@ impl std::ops::Sub<Vector> for Point {
     }
 }
 
+pub fn sub_vector_by_ref(lhs: &Vector, rhs: &Vector) -> Vector {
+    Vector {
+        x: lhs.x - rhs.x,
+        y: lhs.y - rhs.y,
+        z: lhs.z - rhs.z,
+        w: lhs.w - rhs.w,
+    }
+}
+
 impl std::ops::Sub for Vector {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Vector {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-            w: self.w - rhs.w,
-        }
+        sub_vector_by_ref(&self, &rhs)
     }
 }
 
@@ -297,16 +325,20 @@ impl std::ops::Neg for Point {
     }
 }
 
+pub fn mul_vec_f64_by_ref(lhs: &Vector, rhs: f64) -> Vector {
+    Vector {
+        x: lhs.x * rhs,
+        y: lhs.y * rhs,
+        z: lhs.z * rhs,
+        w: lhs.w * rhs,
+    }
+}
+
 impl std::ops::Mul<f64> for Vector {
     type Output = Self;
 
     fn mul(self, rhs: f64) -> Self::Output {
-        Vector {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
-            w: self.w * rhs,
-        }
+        mul_vec_f64_by_ref(&self, rhs)
     }
 }
 
@@ -314,12 +346,16 @@ impl std::ops::Mul<Vector> for f64 {
     type Output = Vector;
 
     fn mul(self, rhs: Vector) -> Self::Output {
-        Vector {
-            x: rhs.x * self,
-            y: rhs.y * self,
-            z: rhs.z * self,
-            w: rhs.w * self,
-        }
+        mul_vec_f64_by_ref(&rhs, self)
+    }
+}
+
+pub fn mul_point_f64(lhs: &Point, rhs: f64) -> Point {
+    Point {
+        x: lhs.x * rhs,
+        y: lhs.y * rhs,
+        z: lhs.z * rhs,
+        w: lhs.w * rhs,
     }
 }
 
@@ -327,12 +363,7 @@ impl std::ops::Mul<f64> for Point {
     type Output = Self;
 
     fn mul(self, rhs: f64) -> Self::Output {
-        Point {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
-            w: self.w * rhs,
-        }
+        mul_point_f64(&self, rhs)
     }
 }
 

@@ -319,5 +319,4 @@ mod test {
         let p2 = t1 * p;
         assert_eq!(&p2, &p1);
     }
-
 }

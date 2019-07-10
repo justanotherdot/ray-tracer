@@ -32,7 +32,7 @@ fn trace() -> Ppm {
             let world_x = -half_wall_size + pixel_size * x as f64;
             let pos = Point::new(world_x, world_y, wall_z);
             let r = Ray::new(ray_origin, (pos - ray_origin).normalize());
-            let xs = s.intersect(r);
+            let xs = s.intersect(&r);
 
             if xs.hit().is_some() {
                 canvas.write_pixel(x, y, ray_strike_color.clone());
