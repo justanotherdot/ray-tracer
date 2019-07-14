@@ -28,7 +28,7 @@ pub struct Material {
 }
 
 impl Material {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let color = Color::new(1., 1., 1.);
         let ambient = 0.1;
         let diffuse = 0.9;
