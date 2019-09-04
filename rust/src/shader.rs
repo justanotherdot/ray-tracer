@@ -43,7 +43,6 @@ impl Material {
         }
     }
 
-    // TODO: It might make sense not to move `self` on lighting.
     pub fn lighting(
         &self,
         light: &PointLight,
