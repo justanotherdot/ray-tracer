@@ -121,7 +121,7 @@ pub fn shade_hit(w: &World, c: &PreComp) -> Color {
         Some(ref light) => c
             .object
             .material
-            .lighting(light, &c.point, &c.eyev, &c.normalv),
+            .lighting(light, &c.point, &c.eyev, &c.normalv, false),
         None => panic!("error: shade_hit called but no light source found"),
     }
 }
