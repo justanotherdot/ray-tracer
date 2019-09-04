@@ -274,9 +274,7 @@ impl Mul<Vector> for Matrix {
     type Output = Vector;
 
     fn mul(self, rhs: Self::Output) -> Self::Output {
-        assert!(self.dims.0 <= 4
-                self.dims.1 <= 4
-                rhs.len() <= 4);
+        assert!(self.dims.0 <= 4 && self.dims.1 <= 4 && rhs.len() <= 4);
         let mut v = Vector::new(0., 0., 0.);
         for row in 0..self.dims.0 {
             for col in 0..self.dims.1 {
@@ -291,9 +289,7 @@ impl Mul<Point> for Matrix {
     type Output = Point;
 
     fn mul(self, rhs: Self::Output) -> Self::Output {
-        assert!(self.dims.0 <= 4
-                self.dims.1 <= 4
-                rhs.len() <= 4);
+        assert!(self.dims.0 <= 4 && self.dims.1 <= 4 && rhs.len() <= 4);
         let mut p = Point::new(0., 0., 0.);
         for row in 0..self.dims.0 {
             for col in 0..self.dims.1 {
