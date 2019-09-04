@@ -33,6 +33,10 @@ impl World {
     pub fn color_at(&self, r: &Ray) -> Color {
         color_at(self, r)
     }
+
+    pub fn intersect_world(&self, r: &Ray) -> Intersections {
+        intersect_world(self, r)
+    }
 }
 
 impl Default for World {
@@ -55,7 +59,6 @@ impl Default for World {
     }
 }
 
-// TODO: Make this a method off World.
 pub fn intersect_world(w: &World, r: &Ray) -> Intersections {
     let sv = smallvec![];
     let mut is = w.objects.iter().fold(sv, |mut acc, o| {
