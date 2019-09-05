@@ -1,5 +1,7 @@
 use crate::color::{mul_color, Color};
 use crate::coordinate::{sub_point_by_ref, Point, Vector};
+use crate::ray::Ray;
+use crate::world::World;
 use std::default::Default;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -62,6 +64,23 @@ impl Default for Material {
     fn default() -> Self {
         Material::new()
     }
+}
+
+// TODO Might belong in `world`, instead.
+pub fn is_shadowed(world: &World, point: &Point) -> bool {
+    world
+        .light
+        .as_ref()
+        .map(|light| {
+            let v = sub_point_by_ref(&light.position, point);
+            let distance = v.magnitude();
+            let direction = v.normalize();
+            let r = Ray::new(point.clone(), direction);
+            let intersections = world.intersect(&r);
+            let h = intersections.hit();
+            return h.is_some() && h.unwrap().t < distance;
+        })
+        .unwrap_or(false)
 }
 
 pub fn lighting(
@@ -307,5 +326,37 @@ mod test {
         let in_shadow = true;
         let result = m.lighting(&light, &position, &eyev, &normalv, in_shadow);
         assert_eq!(result, Color::new(0.1, 0.1, 0.1));
+    }
+
+    #[test]
+    fn there_is_no_shadow_when_nothing_is_collinear_with_point_and_light() {
+        let w: World = Default::default();
+        let p = Point::new(0., 10., 0.);
+
+        assert_eq!(is_shadowed(&w, &p), false);
+    }
+
+    #[test]
+    fn the_shadow_when_an_object_is_between_the_point_and_the_light() {
+        let w: World = Default::default();
+        let p = Point::new(10., -10., 10.);
+
+        assert_eq!(is_shadowed(&w, &p), true);
+    }
+
+    #[test]
+    fn there_is_no_shadow_when_an_object_is_behind_the_light() {
+        let w: World = Default::default();
+        let p = Point::new(-20., 20., -20.);
+
+        assert_eq!(is_shadowed(&w, &p), false);
+    }
+
+    #[test]
+    fn there_is_no_shadow_when_an_object_is_behind_the_point() {
+        let w: World = Default::default();
+        let p = Point::new(-2., 2., -2.);
+
+        assert_eq!(is_shadowed(&w, &p), false);
     }
 }
