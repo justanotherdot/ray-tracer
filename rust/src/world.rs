@@ -3,8 +3,9 @@ use crate::color::Color;
 use crate::coordinate::{Point, Vector};
 use crate::matrix;
 use crate::matrix::{Matrix, SquareMatrix};
+use crate::naive_cmp::F64_EPSILON;
 use crate::ray::{Intersection, Intersections, Ray, Sphere};
-use crate::shader::PointLight;
+use crate::shader::{is_shadowed, PointLight};
 use crate::transformation::Transformation;
 use smallvec::*;
 use std::default::Default;
@@ -81,6 +82,7 @@ pub fn color_at(w: &World, r: &Ray) -> Color {
     }
 }
 
+#[derive(Debug)]
 pub struct PreComp {
     pub t: f64,
     pub object: Rc<Sphere>, // TODO: Should be Shape.
@@ -88,6 +90,7 @@ pub struct PreComp {
     pub eyev: Vector,
     pub normalv: Vector,
     pub inside: bool,
+    pub over_point: Point,
 }
 
 pub fn prepare_computations(intersection: &Intersection, ray: &Ray) -> PreComp {
@@ -96,14 +99,13 @@ pub fn prepare_computations(intersection: &Intersection, ray: &Ray) -> PreComp {
     let point = ray.position(t);
     let eyev = -ray.direction;
     let mut normalv = object.normal_at(point);
-
     let inside = if normalv.dot(&eyev) < 0.0 {
         normalv = -normalv;
         true
     } else {
         false
     };
-
+    let over_point = point + normalv * F64_EPSILON;
     PreComp {
         t,
         object,
@@ -111,19 +113,19 @@ pub fn prepare_computations(intersection: &Intersection, ray: &Ray) -> PreComp {
         eyev,
         normalv,
         inside,
+        over_point,
     }
 }
 
+// TODO turn this into Result.
 pub fn shade_hit(w: &World, c: &PreComp) -> Color {
     // N.B. If we wanted to, we could support multiple light
     // sources by summing each `lighting` result.
-    match w.light {
-        Some(ref light) => c
-            .object
-            .material
-            .lighting(light, &c.point, &c.eyev, &c.normalv),
-        None => panic!("error: shade_hit called but no light source found"),
-    }
+    let shadowed = is_shadowed(w, &c.over_point);
+    let light = w.light.as_ref().unwrap();
+    c.object
+        .material
+        .lighting(&light, &c.over_point, &c.eyev, &c.normalv, shadowed)
 }
 
 pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix {
@@ -476,5 +478,23 @@ mod test {
         c.transform = view_transform(from, to, up);
         let image = c.render(w);
         assert_eq!(image.pixel_at(5, 5), &Color::new(0.38066, 0.47583, 0.2855));
+    }
+
+    #[test]
+    fn shade_hit_is_given_an_intersection_in_shadow() {
+        let mut w: World = World::new();
+        w.light = Some(PointLight::new(
+            Point::new(0., 0., -10.),
+            Color::new(1., 1., 1.),
+        ));
+        let s1 = Sphere::new(0);
+        let mut s2 = Sphere::new(1);
+        s2.set_transform(Transformation::new().translate(0., 0., 10.).build());
+        w.objects = smallvec![s1, s2.clone()];
+        let r = Ray::new(Point::new(0., 0., 5.), Vector::new(0., 0., 1.));
+        let i = Intersection::new(4., &s2);
+        let comps = prepare_computations(&i, &r);
+        let c = w.shade_hit(&comps);
+        assert_eq!(c, Color::new(0.1, 0.1, 0.1));
     }
 }

@@ -140,7 +140,7 @@ impl SquareMatrix for Matrix {
             let c = m[(1, 0)];
             let d = m[(1, 1)];
 
-            (a * d - b * c)
+            a * d - b * c
         } else {
             let mut det = 0.;
             for col in 0..m.dim() {

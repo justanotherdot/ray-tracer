@@ -1,5 +1,7 @@
 use crate::color::{mul_color, Color};
 use crate::coordinate::{sub_point_by_ref, Point, Vector};
+use crate::ray::Ray;
+use crate::world::World;
 use std::default::Default;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -43,14 +45,16 @@ impl Material {
         }
     }
 
+    // TODO Don't just take a bool and change the functionality.
     pub fn lighting(
         &self,
         light: &PointLight,
         point: &Point,
         eyev: &Vector,
         normalv: &Vector,
+        in_shadow: bool,
     ) -> Color {
-        lighting(self, light, point, eyev, normalv)
+        lighting(self, light, point, eyev, normalv, in_shadow)
     }
 }
 
@@ -62,21 +66,44 @@ impl Default for Material {
     }
 }
 
+// TODO Might belong in `world`, instead.
+// TODO turn this into Result of bool, as there may not be a light source.
+pub fn is_shadowed(world: &World, point: &Point) -> bool {
+    world
+        .light
+        .as_ref()
+        .map(|light| {
+            let v = sub_point_by_ref(&light.position, point);
+            let distance = v.magnitude();
+            let direction = v.normalize();
+            let r = Ray::new(point.clone(), direction);
+            let intersections = world.intersect(&r);
+            let h = intersections.hit();
+            match h {
+                Some(h) => h.t < distance,
+                _ => false,
+            }
+        })
+        .unwrap_or(true)
+}
+
 pub fn lighting(
     material: &Material,
     light: &PointLight,
     point: &Point,
     eyev: &Vector,
     normalv: &Vector,
+    in_shadow: bool,
 ) -> Color {
     let effective_color = mul_color(&material.color, &light.intensity);
     let lightv = sub_point_by_ref(&light.position, &point).normalize();
     let ambient = effective_color.clone() * material.ambient;
     let light_dot_normal = lightv.dot(&normalv);
+    dbg!(&light_dot_normal);
 
     let black = Color::new(0., 0., 0.);
-    let diffuse;
-    let specular;
+    let mut diffuse;
+    let mut specular;
     if light_dot_normal < 0. {
         diffuse = black.clone();
         specular = black.clone();
@@ -91,6 +118,11 @@ pub fn lighting(
             let factor = reflect_dot_eye.powf(material.shininess);
             specular = light.intensity.mul_f64(material.specular).mul_f64(factor);
         }
+    }
+
+    if in_shadow {
+        specular = Color::new(0., 0., 0.);
+        diffuse = Color::new(0., 0., 0.);
     }
 
     ambient + diffuse + specular
@@ -234,7 +266,7 @@ mod test {
         let eyev = Vector::new(0., 0., -1.);
         let normalv = Vector::new(0., 0., -1.);
         let light = PointLight::new(Point::new(0., 0., -10.), Color::new(1., 1., 1.));
-        let result = m.lighting(&light, &position, &eyev, &normalv);
+        let result = m.lighting(&light, &position, &eyev, &normalv, false);
         assert_eq!(result, Color::new(1.9, 1.9, 1.9));
     }
 
@@ -248,7 +280,7 @@ mod test {
         let eyev = Vector::new(0., root_two_on_two, -root_two_on_two);
         let normalv = Vector::new(0., 0., -1.);
         let light = PointLight::new(Point::new(0., 0., -10.), Color::new(1., 1., 1.));
-        let result = m.lighting(&light, &position, &eyev, &normalv);
+        let result = m.lighting(&light, &position, &eyev, &normalv, false);
         assert_eq!(result, Color::new(1.0, 1.0, 1.0));
     }
 
@@ -261,7 +293,7 @@ mod test {
         let eyev = Vector::new(0., 0., -1.);
         let normalv = Vector::new(0., 0., -1.);
         let light = PointLight::new(Point::new(0., 10., -10.), Color::new(1., 1., 1.));
-        let result = m.lighting(&light, &position, &eyev, &normalv);
+        let result = m.lighting(&light, &position, &eyev, &normalv, false);
         assert_eq!(result, Color::new(0.7364, 0.7364, 0.7364));
     }
 
@@ -275,7 +307,7 @@ mod test {
         let eyev = Vector::new(0., -root_two_on_two, -root_two_on_two);
         let normalv = Vector::new(0., 0., -1.);
         let light = PointLight::new(Point::new(0., 10., -10.), Color::new(1., 1., 1.));
-        let result = m.lighting(&light, &position, &eyev, &normalv);
+        let result = m.lighting(&light, &position, &eyev, &normalv, false);
         assert_eq!(result, Color::new(1.6364, 1.6364, 1.6364));
     }
 
@@ -288,7 +320,53 @@ mod test {
         let eyev = Vector::new(0., 0., -1.);
         let normalv = Vector::new(0., 0., -1.);
         let light = PointLight::new(Point::new(0., 0., 10.), Color::new(1., 1., 1.));
-        let result = m.lighting(&light, &position, &eyev, &normalv);
+        let result = m.lighting(&light, &position, &eyev, &normalv, false);
         assert_eq!(result, Color::new(0.1, 0.1, 0.1));
+    }
+
+    #[test]
+    fn lighting_with_the_surface_in_shadow() {
+        // preamble.
+        let m = Material::new();
+        let position = Point::new(0., 0., 0.);
+
+        let eyev = Vector::new(0., 0., -1.);
+        let normalv = Vector::new(0., 0., -1.);
+        let light = PointLight::new(Point::new(0., 0., -10.), Color::new(1., 1., 1.));
+        let in_shadow = true;
+        let result = m.lighting(&light, &position, &eyev, &normalv, in_shadow);
+        assert_eq!(result, Color::new(0.1, 0.1, 0.1));
+    }
+
+    #[test]
+    fn there_is_no_shadow_when_nothing_is_collinear_with_point_and_light() {
+        let w: World = Default::default();
+        let p = Point::new(0., 10., 0.);
+
+        assert_eq!(is_shadowed(&w, &p), false);
+    }
+
+    #[test]
+    fn the_shadow_when_an_object_is_between_the_point_and_the_light() {
+        let w: World = Default::default();
+        let p = Point::new(10., -10., 10.);
+
+        assert_eq!(is_shadowed(&w, &p), true);
+    }
+
+    #[test]
+    fn there_is_no_shadow_when_an_object_is_behind_the_light() {
+        let w: World = Default::default();
+        let p = Point::new(-20., 20., -20.);
+
+        assert_eq!(is_shadowed(&w, &p), false);
+    }
+
+    #[test]
+    fn there_is_no_shadow_when_an_object_is_behind_the_point() {
+        let w: World = Default::default();
+        let p = Point::new(-2., 2., -2.);
+
+        assert_eq!(is_shadowed(&w, &p), false);
     }
 }

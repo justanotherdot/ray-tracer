@@ -46,7 +46,6 @@ impl Ray {
 // ids. A static hashmap is a horrible idea.
 // TODO: This needs a custom PartialEq with our naive cmp fn.
 // Since we will directly or indirectly compare against f64 again.
-// TODO: Remove this clone?
 #[derive(PartialEq, Debug, Clone)]
 pub struct Sphere {
     pub id: u64,
@@ -394,5 +393,18 @@ mod test {
         s.set_transform(t.clone());
         let xs = s.intersect(&r);
         assert_eq!(xs.count(), 0);
+    }
+
+    #[test]
+    fn the_hit_should_offset_the_point() {
+        use crate::world::prepare_computations;
+        let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
+        let mut shape = Sphere::new(0);
+        let t = Transformation::new().translate(0., 0., 1.).build();
+        shape.set_transform(t);
+        let i = Intersection::new(5., &shape);
+        let comps = prepare_computations(&i, &r);
+        assert!(comps.over_point.z < -naive_cmp::F64_EPSILON / 2.);
+        assert!(comps.point.z > comps.over_point.z);
     }
 }
