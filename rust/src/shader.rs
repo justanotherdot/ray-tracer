@@ -67,6 +67,7 @@ impl Default for Material {
 }
 
 // TODO Might belong in `world`, instead.
+// TODO turn this into Result of bool, as there may not be a light source.
 pub fn is_shadowed(world: &World, point: &Point) -> bool {
     world
         .light
@@ -78,9 +79,12 @@ pub fn is_shadowed(world: &World, point: &Point) -> bool {
             let r = Ray::new(point.clone(), direction);
             let intersections = world.intersect(&r);
             let h = intersections.hit();
-            return h.is_some() && h.unwrap().t < distance;
+            match h {
+                Some(h) => h.t < distance,
+                _ => false,
+            }
         })
-        .unwrap_or(false)
+        .unwrap_or(true)
 }
 
 pub fn lighting(
@@ -89,16 +93,17 @@ pub fn lighting(
     point: &Point,
     eyev: &Vector,
     normalv: &Vector,
-    _in_shadow: bool,
+    in_shadow: bool,
 ) -> Color {
     let effective_color = mul_color(&material.color, &light.intensity);
     let lightv = sub_point_by_ref(&light.position, &point).normalize();
     let ambient = effective_color.clone() * material.ambient;
     let light_dot_normal = lightv.dot(&normalv);
+    dbg!(&light_dot_normal);
 
     let black = Color::new(0., 0., 0.);
-    let diffuse;
-    let specular;
+    let mut diffuse;
+    let mut specular;
     if light_dot_normal < 0. {
         diffuse = black.clone();
         specular = black.clone();
@@ -113,6 +118,11 @@ pub fn lighting(
             let factor = reflect_dot_eye.powf(material.shininess);
             specular = light.intensity.mul_f64(material.specular).mul_f64(factor);
         }
+    }
+
+    if in_shadow {
+        specular = Color::new(0., 0., 0.);
+        diffuse = Color::new(0., 0., 0.);
     }
 
     ambient + diffuse + specular
@@ -322,7 +332,7 @@ mod test {
 
         let eyev = Vector::new(0., 0., -1.);
         let normalv = Vector::new(0., 0., -1.);
-        let light = PointLight::new(Point::new(0., 0., 10.), Color::new(1., 1., 1.));
+        let light = PointLight::new(Point::new(0., 0., -10.), Color::new(1., 1., 1.));
         let in_shadow = true;
         let result = m.lighting(&light, &position, &eyev, &normalv, in_shadow);
         assert_eq!(result, Color::new(0.1, 0.1, 0.1));
