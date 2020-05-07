@@ -3,6 +3,10 @@ target/
 
 # misc
 *.ppm
+*.svg
+perf.data*
+stacks.folded
+profile.pb
 
 # editor
 rusty-tags.vi

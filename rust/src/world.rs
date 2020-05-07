@@ -2,7 +2,7 @@ use crate::canvas::Canvas;
 use crate::color::Color;
 use crate::coordinate::{Point, Vector};
 use crate::matrix;
-use crate::matrix::{Matrix, SquareMatrix};
+use crate::matrix::Matrix;
 use crate::naive_cmp::F64_EPSILON;
 use crate::ray::{Intersection, Intersections, Ray, Sphere};
 use crate::shader::{is_shadowed, PointLight};
@@ -11,6 +11,7 @@ use smallvec::*;
 use std::default::Default;
 use std::rc::Rc;
 
+#[derive(Debug)]
 pub struct World {
     pub objects: SmallVec<[Sphere; 64]>,
     pub light: Option<PointLight>,
@@ -63,9 +64,7 @@ impl Default for World {
 pub fn intersect_world(w: &World, r: &Ray) -> Intersections {
     let sv = smallvec![];
     let mut is = w.objects.iter().fold(sv, |mut acc, o| {
-        o.intersect(&r).into_iter().for_each(|intersection| {
-            acc.push(intersection.clone());
-        });
+        acc.extend(o.intersect(&r));
         acc
     });
 
@@ -134,7 +133,7 @@ pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix {
     let left = forward.cross(&upn);
     let true_up = left.cross(&forward);
     #[rustfmt::skip]
-    let orientation: Matrix = SquareMatrix::from_nested_vec(vec![
+    let orientation: Matrix = Matrix::from_nested_vec(vec![
         vec![left.x,       left.y,     left.z,    0.],
         vec![true_up.x,    true_up.y,  true_up.z, 0.],
         vec![-forward.x,  -forward.y, -forward.z, 0.],
@@ -219,7 +218,7 @@ impl Camera {
 mod test {
     use super::*;
     use crate::coordinate::Vector;
-    use crate::matrix::{IdentityMatrix, Matrix, SquareMatrix};
+    use crate::matrix::{IdentityMatrix, Matrix};
     use crate::ray::Ray;
     use crate::shader::PointLight;
 

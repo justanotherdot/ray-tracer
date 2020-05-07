@@ -1,6 +1,4 @@
-#![feature(test)]
-
-extern crate test;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use ray_tracer::{
     color::Color,
@@ -14,8 +12,6 @@ use ray_tracer::{
     world::{Camera, World},
 };
 use std::f64::consts::PI;
-use std::fs::File;
-use std::io::prelude::*;
 
 fn produce_world() -> World {
     // TODO: Try with default world, what does it look like when rendered?
@@ -100,44 +96,19 @@ fn trace(width: usize, height: usize) -> Ppm {
     canvas.to_ppm()
 }
 
-pub fn main() -> std::io::Result<()> {
-    let guard = pprof::ProfilerGuard::new(100).unwrap();
+fn criterion_benchmark(c: &mut Criterion) {
+    c.bench_function("produce_world world-demo 30x15", |b| {
+        b.iter(|| black_box(produce_world()))
+    });
 
-    let ppm = trace(200, 100);
-    let mut file = File::create("world_demo.ppm")?;
-    file.write_all(ppm.blob().as_bytes())?;
-
-    let disabled = true;
-    if let Ok(report) = guard.report().build() {
-        if !disabled {
-            // NB. below requires the flamegraph feature to be on.
-            // but it is not compatible with protobuf feature.
-            //let file = File::create("flamegraph.pprof.svg").unwrap();
-            //report.flamegraph(file).unwrap();
-            use pprof::protos::Message;
-
-            let mut file = File::create("profile.pb").unwrap();
-            let profile = report.pprof().unwrap();
-
-            let mut content = Vec::new();
-            profile.encode(&mut content).unwrap();
-            file.write_all(&content).unwrap();
-
-            println!("report: {}", &report);
-        }
-    };
-
-    Ok(())
+    c.bench_function("trace world-demo 30x15", |b| {
+        b.iter(|| black_box(trace(200, 100)))
+    });
 }
 
-#[cfg(test)]
-mod tests {
-    //use super::*;
-    //use test::Bencher;
-
-    // old bencher test, replaced by criterion.
-    //#[bench]
-    //fn bench_trace(b: &mut Bencher) {
-    //b.iter(|| test::black_box(produce_world()));
-    //}
-}
+criterion_group!(
+    name = benches;
+    config = Criterion::default().sample_size(10);
+    targets = criterion_benchmark
+);
+criterion_main!(benches);
