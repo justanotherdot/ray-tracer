@@ -15,11 +15,9 @@ fn identity_matrix_from_dims(num_rows: usize, num_cols: usize) -> Matrix {
 }
 
 /// Generate an identity matrix with the same dimensions as this Matrix.
-fn identity_matrix_from_square_matrix<M>(m: &M) -> Matrix
-where
-    M: SquareMatrix,
-{
-    let dim = m.dim();
+fn identity_matrix_from_square_matrix(m: &Matrix) -> Matrix {
+    assert!(m.dims.0 == m.dims.1);
+    let dim = m.dims.0;
     (0..dim).fold(Matrix::empty(dim, dim), |mut m, i| {
         m[(i, i)] = 1.;
         m
@@ -37,16 +35,6 @@ pub struct Matrix {
     data: SmallVec<[f64; 16]>,
 }
 
-// TODO: Ought to have a Default impl with empty.
-impl Matrix {
-    pub fn empty(num_rows: usize, num_cols: usize) -> Self {
-        Matrix {
-            dims: (num_rows, num_cols),
-            data: smallvec![0.0; num_rows*num_cols],
-        }
-    }
-}
-
 impl PartialEq for Matrix {
     fn eq(&self, other: &Self) -> bool {
         if other.dims.0 != self.dims.0 || other.dims.1 != self.dims.1 {
@@ -59,10 +47,7 @@ impl PartialEq for Matrix {
     }
 }
 
-pub trait IdentityMatrix
-where
-    Self: SquareMatrix,
-{
+pub trait IdentityMatrix {
     fn identity(&self) -> Matrix;
 }
 
@@ -72,36 +57,19 @@ impl IdentityMatrix for Matrix {
     }
 }
 
-// TODO This should be turned into a simple newtype struct. That allows us to state the constraint
-// of having square matrices clearly in type signatures, and people must always use the smart
-// constructors as they won't be able to construct them directly.
-pub trait SquareMatrix {
-    fn from_vec(vec: Vec<f64>) -> Self;
-    fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self;
-    fn dim(&self) -> usize;
-    fn empty(dim: usize) -> Self;
-    fn transpose(&self) -> Self;
-    fn determinant(&self) -> f64;
-    fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self;
-    fn minor(&self, exc_row: usize, exc_col: usize) -> f64;
-    fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64;
-    fn is_invertible(&self) -> bool;
-    fn inverse(&self) -> Self;
-}
+impl Matrix {
+    pub fn empty(num_rows: usize, num_cols: usize) -> Self {
+        Matrix {
+            dims: (num_rows, num_cols),
+            data: smallvec![0.0; num_rows*num_cols],
+        }
+    }
 
-impl SquareMatrix for Matrix {
-    fn dim(&self) -> usize {
+    pub fn dim(&self) -> usize {
         self.dims.0
     }
 
-    fn empty(dim: usize) -> Self {
-        Matrix::empty(dim, dim)
-    }
-
-    // TODO One day having instances of From for SquareMatrix
-    // A dependantly typed language could encode this in the type system.
-    // Rust is not one of those languages, so instead we'll have do the checks at runtime here.
-    fn from_vec(vec: Vec<f64>) -> Self {
+    pub fn from_vec(vec: Vec<f64>) -> Self {
         let dim = (vec.len() as f64).log2() as usize;
         assert!(vec.len() == 4 || vec.len() == 9 || vec.len() == 16);
         Matrix {
@@ -110,8 +78,7 @@ impl SquareMatrix for Matrix {
         }
     }
 
-    // TODO One day having instances of From for SquareMatrix
-    fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self {
+    pub fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self {
         let vec: Vec<f64> = vec.into_iter().flatten().collect();
         let dim = (vec.len() as f64).log2() as usize;
         assert!(vec.len() == 4 || vec.len() == 9 || vec.len() == 16);
@@ -121,7 +88,7 @@ impl SquareMatrix for Matrix {
         }
     }
 
-    fn transpose(&self) -> Self {
+    pub fn transpose(&self) -> Self {
         let dim = self.dim();
         let mut m = self.clone();
         for row in 0..dim {
@@ -132,7 +99,7 @@ impl SquareMatrix for Matrix {
         m
     }
 
-    fn determinant(&self) -> f64 {
+    pub fn determinant(&self) -> f64 {
         let m = self;
         if m.dim() == 2 {
             let a = m[(0, 0)];
@@ -142,44 +109,36 @@ impl SquareMatrix for Matrix {
 
             a * d - b * c
         } else {
-            let mut det = 0.;
-            for col in 0..m.dim() {
+            (0..m.dim()).fold(0.0, |mut det, col| {
                 det += m[(0, col)] * m.cofactor(0, col);
-            }
-            det
+                det
+            })
         }
     }
 
     /// submatrix deletes exactly one row and one column,
     /// effectively reducing the dimension by one.
-    fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self {
-        let dim = self.dim() - 1;
-        let mut m: Matrix = Matrix::empty(dim, dim);
-        // TODO Yuck.
-        let mut target_row = 0;
-        let mut target_col = 0;
-        for row in 0..self.dim() {
-            for col in 0..self.dim() {
-                if row == exc_row || col == exc_col {
-                    continue;
-                }
-
-                m[(target_row, target_col)] = self[(row, col)];
-                target_col = (target_col + 1) % dim;
+    pub fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self {
+        let dim = self.dim();
+        let mut m = Matrix {
+            dims: (dim - 1, dim - 1),
+            data: SmallVec::with_capacity(16),
+        };
+        self.data.iter().enumerate().for_each(|(ix, cell)| {
+            let col = ix % dim;
+            let row = ix / dim;
+            if col != exc_col && row != exc_row {
+                m.data.push(*cell);
             }
-            if row != exc_row {
-                target_row += 1;
-            }
-        }
+        });
         m
     }
 
-    fn minor(&self, exc_row: usize, exc_col: usize) -> f64 {
-        let submatrix = self.submatrix(exc_row, exc_col);
-        submatrix.determinant()
+    pub fn minor(&self, exc_row: usize, exc_col: usize) -> f64 {
+        self.submatrix(exc_row, exc_col).determinant()
     }
 
-    fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64 {
+    pub fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64 {
         let factor = if (exc_row + exc_col) % 2 == 1 {
             -1.0
         } else {
@@ -188,11 +147,11 @@ impl SquareMatrix for Matrix {
         factor * self.minor(exc_row, exc_col)
     }
 
-    fn is_invertible(&self) -> bool {
+    pub fn is_invertible(&self) -> bool {
         self.determinant() != 0.
     }
 
-    fn inverse(&self) -> Self {
+    pub fn inverse(&self) -> Self {
         assert!(self.is_invertible());
 
         let mut copy = Matrix::empty(self.dim(), self.dim());
@@ -315,7 +274,7 @@ mod properties {
             v in any::<Vec<f64>>().prop_filter(
                 "Vecs for 4x4 matrices",
                 |v| v.len() == 4*4 || v.len() == 3*3 || v.len() == 2*2)) {
-            let m: Matrix = SquareMatrix::from_vec(v);
+            let m: Matrix = Matrix::from_vec(v);
             assert_eq!(
                 &matrix_mul(&m, &m.identity()),
                 &matrix_mul(&m.identity(), &m)
@@ -328,7 +287,7 @@ mod properties {
             v in any::<Vec<f64>>().prop_filter(
                 "Vecs for 4x4 matrices",
                 |v| v.len() == 4*4 || v.len() == 3*3 || v.len() == 2*2)) {
-            let m: Matrix = SquareMatrix::from_vec(v);
+            let m: Matrix = Matrix::from_vec(v);
             assert_eq!(
                 &matrix_mul(&m.identity(), &m),
                 &m
@@ -345,7 +304,7 @@ mod test {
     #[test]
     fn constructing_and_inspecting_a_4x4_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
            1.,   2.,   3.,  4.,
            5.5,  6.5,  7.5, 8.5,
            9.,   10.,  11., 12.,
@@ -364,7 +323,7 @@ mod test {
     #[should_panic]
     fn constructing_invalid_matrices_01() {
         #[rustfmt::skip]
-        let _: Matrix = SquareMatrix::from_vec(vec![
+        let _: Matrix = Matrix::from_vec(vec![
            1.,   2.,   3.,  4.,
            5.5,  6.5,  7.5, 8.5,
            9.,   10.,  11., 12.,
@@ -376,20 +335,20 @@ mod test {
     #[should_panic]
     fn constructing_invalid_matrices_02() {
         #[rustfmt::skip]
-        let _: Matrix = SquareMatrix::from_vec(vec![1., 2.]);
+        let _: Matrix = Matrix::from_vec(vec![1., 2.]);
     }
 
     #[test]
     #[should_panic]
     fn constructing_invalid_matrices_03() {
         #[rustfmt::skip]
-        let _: Matrix = SquareMatrix::from_vec(vec![1.]);
+        let _: Matrix = Matrix::from_vec(vec![1.]);
     }
 
     #[test]
     fn a_2x2_matrix_ought_to_be_representable() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             -3., 5.,
             1., -2.,
         ]);
@@ -402,7 +361,7 @@ mod test {
     #[test]
     fn a_3x3_matrix_ought_to_be_representable() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             -3., 5., 0.,
             1., -2., -7.,
             0., 1., 1.,
@@ -415,7 +374,7 @@ mod test {
     #[test]
     fn matrix_equality_with_identical_matrices() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3., 4.,
             5., 6., 7., 8.,
             9., 8., 7., 6.,
@@ -423,7 +382,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             1., 2., 3., 4.,
             5., 6., 7., 8.,
             9., 8., 7., 6.,
@@ -436,7 +395,7 @@ mod test {
     #[test]
     fn matrix_inequality_with_non_identical_matrices() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3., 4.,
             5., 6., 7., 8.,
             9., 8., 7., 6.,
@@ -444,7 +403,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             -1., -2., -3., -4.,
             -5., -6., -7., -8.,
             -9., -8., -7., -6.,
@@ -457,7 +416,7 @@ mod test {
     #[test]
     fn matrix_inequality_with_matrices_of_differing_dims() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3., 4.,
             5., 6., 7., 8.,
             9., 8., 7., 6.,
@@ -465,7 +424,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             -1., -2., -3.,
             -5., -6., -7.,
             -9., -8., -7.,
@@ -477,7 +436,7 @@ mod test {
     #[test]
     fn multiplying_two_matrices() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3., 4.,
             5., 6., 7., 8.,
             9., 8., 7., 6.,
@@ -485,7 +444,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             -2., 1., 2., 3.,
             3., 2., 1., -1.,
             4., 3., 6., 5.,
@@ -494,7 +453,7 @@ mod test {
 
         let lhs_mn = m * n;
         #[rustfmt::skip]
-        let rhs_mn = SquareMatrix::from_vec(vec![
+        let rhs_mn = Matrix::from_vec(vec![
             20., 22., 50., 48.,
             44., 54., 114., 108.,
             40., 58., 110., 102.,
@@ -507,20 +466,20 @@ mod test {
     #[test]
     fn multiplying_two_matrices_2x2() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2.,
             5., 6.,
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             -2., 1.,
             3.,  2.,
         ]);
 
         let lhs_mn = m * n;
         #[rustfmt::skip]
-        let rhs_mn = SquareMatrix::from_vec(vec![
+        let rhs_mn = Matrix::from_vec(vec![
             4., 5.,
             8., 17.,
         ]);
@@ -531,14 +490,14 @@ mod test {
     #[test]
     fn multiplying_two_matrices_3x3() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3.,
             5., 6., 7.,
             9., 8., 7.,
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             -2., 1., 2.,
             3., 2., 1.,
             4., 3., 6.,
@@ -546,7 +505,7 @@ mod test {
 
         let lhs_mn = m * n;
         #[rustfmt::skip]
-        let rhs_mn = SquareMatrix::from_vec(vec![
+        let rhs_mn = Matrix::from_vec(vec![
             16., 14., 22.,
             36., 38., 58.,
             34., 46., 68.,
@@ -559,14 +518,14 @@ mod test {
     #[should_panic]
     fn invalid_matrix_multiplication_01() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3.,
             5., 6., 7.,
             9., 8., 7.,
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             -2., 1., 2., 2.,
             3., 2., 1., 2.,
             4., 3., 6., 2.,
@@ -579,7 +538,7 @@ mod test {
     #[test]
     fn matrix_multiplication_is_not_associative() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3., 4.,
             5., 6., 7., 8.,
             9., 8., 7., 6.,
@@ -587,7 +546,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_vec(vec![
+        let n: Matrix = Matrix::from_vec(vec![
             -2., 1., 2., 3.,
             3., 2., 1., -1.,
             4., 3., 6., 5.,
@@ -603,7 +562,7 @@ mod test {
     #[test]
     fn identity_matrices_have_the_right_shape() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_vec(vec![
+        let m: Matrix = Matrix::from_vec(vec![
             1., 2., 3., 4.,
             5., 6., 7., 8.,
             9., 8., 7., 6.,
@@ -613,7 +572,7 @@ mod test {
         let actual_ident = m.identity();
 
         #[rustfmt::skip]
-        let expected_ident = SquareMatrix::from_vec(vec![
+        let expected_ident = Matrix::from_vec(vec![
             1., 0., 0., 0.,
             0., 1., 0., 0.,
             0., 0., 1., 0.,
@@ -625,7 +584,7 @@ mod test {
 
     #[test]
     fn multiplying_a_matrix_by_the_identity_matrix() {
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 2., 3., 4.],
             vec![5., 6., 7., 8.],
             vec![9., 8., 7., 6.],
@@ -637,7 +596,7 @@ mod test {
 
     #[test]
     fn multiplying_a_matrix_by_the_identity_matrix_is_commutative() {
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 2., 3., 4.],
             vec![5., 6., 7., 8.],
             vec![9., 8., 7., 6.],
@@ -652,7 +611,7 @@ mod test {
 
     #[test]
     fn multiplying_matrices_mutably() {
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 2., 3., 4.],
             vec![5., 6., 7., 8.],
             vec![9., 8., 7., 6.],
@@ -667,14 +626,14 @@ mod test {
 
     #[test]
     fn transposing_a_matrix() {
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![0., 9., 3., 0.],
             vec![9., 8., 0., 8.],
             vec![1., 8., 5., 3.],
             vec![0., 0., 5., 8.],
         ]);
 
-        let n: Matrix = SquareMatrix::from_nested_vec(vec![
+        let n: Matrix = Matrix::from_nested_vec(vec![
             vec![0., 9., 1., 0.],
             vec![9., 8., 8., 0.],
             vec![3., 0., 5., 5.],
@@ -694,7 +653,7 @@ mod test {
     #[test]
     fn calculating_the_determinant_of_a_2x2_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 5.],
             vec![-3., 2.],
         ]);
@@ -705,14 +664,14 @@ mod test {
     #[test]
     fn a_submatrix_of_a_3x3_matrix_is_a_2x2_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 5., 0.],
             vec![-3., 2., 7.],
             vec![0., 6., -3.],
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_nested_vec(vec![
+        let n: Matrix = Matrix::from_nested_vec(vec![
             vec![-3., 2.],
             vec![0., 6.],
         ]);
@@ -723,7 +682,7 @@ mod test {
     #[test]
     fn a_submatrix_of_a_4x4_matrix_is_a_3x3_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![-6., 1., 1., 6.],
             vec![-8., 5., 8., 6.],
             vec![-1., 0., 8., 2.],
@@ -731,7 +690,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let n: Matrix = SquareMatrix::from_nested_vec(vec![
+        let n: Matrix = Matrix::from_nested_vec(vec![
             vec![-6., 1., 6.],
             vec![-8., 8., 6.],
             vec![-7., -1., 1.],
@@ -743,7 +702,7 @@ mod test {
     #[test]
     fn calculating_a_minor_of_a_3x3_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![3., 5., 0.],
             vec![2., -1., -7.],
             vec![6., -1., 5.],
@@ -757,7 +716,7 @@ mod test {
     #[test]
     fn calculating_a_cofactor_of_a_3x3_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![3., 5., 0.],
             vec![2., -1., -7.],
             vec![6., -1., 5.],
@@ -772,7 +731,7 @@ mod test {
     #[test]
     fn calculating_the_determinant_of_a_3x3_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 2., 6.],
             vec![-5., 8., -4.],
             vec![2., 6., 4.],
@@ -787,7 +746,7 @@ mod test {
     #[test]
     fn calculating_the_determinant_of_a_4x4_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![-2., -8., 3., 5.],
             vec![-3., 1., 7., 3.],
             vec![1., 2., -9., 6.],
@@ -804,7 +763,7 @@ mod test {
     #[test]
     fn testing_an_invertible_matrix_for_invertibility() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![6., 4., 4., 4.],
             vec![5., 5., 7., 6.],
             vec![4., -9., 3., -7.],
@@ -818,7 +777,7 @@ mod test {
     #[test]
     fn testing_a_noninvertible_matrix_for_invertibility() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![-4., 2., -2., -3.],
             vec![9., 6., 2., 6.],
             vec![0., -5., 1., -5.],
@@ -832,7 +791,7 @@ mod test {
     #[test]
     fn calculating_the_inverse_of_a_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![-5., 2., 6., -8.],
             vec![1., -5., 1., 8.],
             vec![7., 7., -6., -7.],
@@ -847,7 +806,7 @@ mod test {
         assert_eq!(m.cofactor(3, 2), 105.);
         assert_eq!(n[(2, 3)], 105. / 532.);
 
-        let expected_n: Matrix = SquareMatrix::from_nested_vec(vec![
+        let expected_n: Matrix = Matrix::from_nested_vec(vec![
             vec![0.21805, 0.45113, 0.24060, -0.04511],
             vec![-0.80827, -1.45677, -0.44361, 0.52068],
             vec![-0.07895, -0.22368, -0.05263, 0.19737],
@@ -860,7 +819,7 @@ mod test {
     #[test]
     fn calculating_the_inverse_of_another_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![8., -5., 9., 2.],
             vec![7., 5., 6., 1.],
             vec![-6., 0., 9., 6.],
@@ -868,7 +827,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let m_inverse: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m_inverse: Matrix = Matrix::from_nested_vec(vec![
             vec![-0.15385, -0.15385, -0.28205, -0.53846],
             vec![-0.07692,  0.12308,  0.02564,  0.03077],
             vec![ 0.35897,  0.35897,  0.43590,  0.92308],
@@ -881,7 +840,7 @@ mod test {
     #[test]
     fn calculating_the_inverse_of_a_third_matrix() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![9., 3., 0., 9.],
             vec![-5., -2., -6., -3.],
             vec![-4., 9., 6., 4.],
@@ -889,7 +848,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let m_inverse: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m_inverse: Matrix = Matrix::from_nested_vec(vec![
             vec![-0.04074, -0.07778,  0.14444, -0.22222],
             vec![-0.07778,  0.03333,  0.36667, -0.33333],
             vec![-0.02901, -0.14630, -0.10926,  0.12963],
@@ -902,7 +861,7 @@ mod test {
     #[test]
     fn multiplying_a_product_by_its_inverse() {
         #[rustfmt::skip]
-        let a: Matrix = SquareMatrix::from_nested_vec(vec![
+        let a: Matrix = Matrix::from_nested_vec(vec![
             vec![ 3., -9.,  7.,  3.],
             vec![ 3., -8.,  2., -9.],
             vec![-4.,  4.,  4.,  1.],
@@ -910,7 +869,7 @@ mod test {
         ]);
 
         #[rustfmt::skip]
-        let b: Matrix = SquareMatrix::from_nested_vec(vec![
+        let b: Matrix = Matrix::from_nested_vec(vec![
             vec![ 8.,  2.,  2.,  2.],
             vec![ 3., -1.,  7.,  0.],
             vec![ 7.,  0.,  5.,  4.],
@@ -924,7 +883,7 @@ mod test {
     #[test]
     fn a_matrix_multiplied_by_a_point() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 2., 3., 4.],
             vec![2., 4., 4., 2.],
             vec![8., 6., 4., 1.],
@@ -940,7 +899,7 @@ mod test {
     #[test]
     fn a_matrix_multiplied_by_a_vector() {
         #[rustfmt::skip]
-        let m: Matrix = SquareMatrix::from_nested_vec(vec![
+        let m: Matrix = Matrix::from_nested_vec(vec![
             vec![1., 2., 3., 4.],
             vec![2., 4., 4., 2.],
             vec![8., 6., 4., 1.],

@@ -1,5 +1,5 @@
 use crate::coordinate::{Point, Vector};
-use crate::matrix::{IdentityMatrix, Matrix, SquareMatrix};
+use crate::matrix::{IdentityMatrix, Matrix};
 use crate::naive_cmp;
 use crate::shader::Material;
 use smallvec::*;
@@ -7,7 +7,7 @@ use std::cmp::{Eq, Ord, Ordering, PartialEq};
 use std::default::Default;
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Ray {
     pub origin: Point,
     pub direction: Vector,

@@ -7,11 +7,18 @@ edition = "2018"
 [dependencies]
 smallvec = "0.6.10"
 proptest = "0.9.6"
+criterion = "0.3"
+pprof = { version = "0.3", features = ["protobuf"] }
 # This is useful for ray intersections, but should be compared against smallvec
 #binary-heap-plus = "0.2.0"
 
 [profile.release]
+debug = true
 lto = true
 panic = "abort"
-#rustflags = ["-C", "target-cpu=native"]
 #codegen-units = 1
+#rustflags = ["-C", "target-cpu=native"]
+
+[[bench]]
+name = "world_demo_bench"
+harness = false

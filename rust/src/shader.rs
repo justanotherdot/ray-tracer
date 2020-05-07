@@ -99,8 +99,6 @@ pub fn lighting(
     let lightv = sub_point_by_ref(&light.position, &point).normalize();
     let ambient = effective_color.clone() * material.ambient;
     let light_dot_normal = lightv.dot(&normalv);
-    dbg!(&light_dot_normal);
-
     let black = Color::new(0., 0., 0.);
     let mut diffuse;
     let mut specular;
@@ -119,12 +117,10 @@ pub fn lighting(
             specular = light.intensity.mul_f64(material.specular).mul_f64(factor);
         }
     }
-
     if in_shadow {
         specular = Color::new(0., 0., 0.);
         diffuse = Color::new(0., 0., 0.);
     }
-
     ambient + diffuse + specular
 }
 
