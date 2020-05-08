@@ -25,14 +25,13 @@ fn identity_matrix_from_square_matrix(m: &Matrix) -> Matrix {
 }
 
 // TODO: Would be handy ot have a nicer debug output for matrices.
-// TODO: const generics would be really handy here
-// to generalize the MxN lengths at the type level.
+// TODO: const generics would be handy to express the MxN lengths at the type level.
 #[derive(Debug, Clone)]
 pub struct Matrix {
     #[allow(dead_code)]
     dims: (usize, usize),
     #[allow(dead_code)]
-    data: SmallVec<[f64; 16]>,
+    data: [f64; 16],
 }
 
 impl PartialEq for Matrix {
@@ -61,7 +60,7 @@ impl Matrix {
     pub fn empty(num_rows: usize, num_cols: usize) -> Self {
         Matrix {
             dims: (num_rows, num_cols),
-            data: smallvec![0.0; num_rows*num_cols],
+            data: [0.0; 16],
         }
     }
 
@@ -72,9 +71,15 @@ impl Matrix {
     pub fn from_vec(vec: Vec<f64>) -> Self {
         let dim = (vec.len() as f64).log2() as usize;
         assert!(vec.len() == 4 || vec.len() == 9 || vec.len() == 16);
+        let mut data = [0_f64; 16];
+        vec.iter().enumerate().for_each(|(ix, cell)| {
+            if let Some(cpy) = data.get_mut(ix) {
+                *cpy = *cell;
+            }
+        });
         Matrix {
             dims: (dim, dim),
-            data: SmallVec::from_vec(vec),
+            data,
         }
     }
 
@@ -82,10 +87,7 @@ impl Matrix {
         let vec: Vec<f64> = vec.into_iter().flatten().collect();
         let dim = (vec.len() as f64).log2() as usize;
         assert!(vec.len() == 4 || vec.len() == 9 || vec.len() == 16);
-        Matrix {
-            dims: (dim, dim),
-            data: SmallVec::from_vec(vec),
-        }
+        Self::from_vec(vec)
     }
 
     pub fn transpose(&self) -> Self {
@@ -106,7 +108,6 @@ impl Matrix {
             let b = m[(0, 1)];
             let c = m[(1, 0)];
             let d = m[(1, 1)];
-
             a * d - b * c
         } else {
             (0..m.dim()).fold(0.0, |mut det, col| {
@@ -122,13 +123,17 @@ impl Matrix {
         let dim = self.dim();
         let mut m = Matrix {
             dims: (dim - 1, dim - 1),
-            data: SmallVec::with_capacity(16),
+            data: [0_f64; 16],
         };
+        let mut target = 0;
         self.data.iter().enumerate().for_each(|(ix, cell)| {
             let col = ix % dim;
             let row = ix / dim;
             if col != exc_col && row != exc_row {
-                m.data.push(*cell);
+                if let Some(cpy) = m.data.get_mut(target) {
+                    *cpy = *cell;
+                    target += 1;
+                }
             }
         });
         m
