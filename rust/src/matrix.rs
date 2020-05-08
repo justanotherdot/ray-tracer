@@ -1,6 +1,5 @@
 use crate::coordinate::{Point, Vector};
 use crate::naive_cmp::naive_approx_equal_float;
-use smallvec::*;
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut, Mul};
 
@@ -85,7 +84,6 @@ impl Matrix {
 
     pub fn from_nested_vec(vec: Vec<Vec<f64>>) -> Self {
         let vec: Vec<f64> = vec.into_iter().flatten().collect();
-        let dim = (vec.len() as f64).log2() as usize;
         assert!(vec.len() == 4 || vec.len() == 9 || vec.len() == 16);
         Self::from_vec(vec)
     }
@@ -110,10 +108,7 @@ impl Matrix {
             let d = m[(1, 1)];
             a * d - b * c
         } else {
-            (0..m.dim()).fold(0.0, |mut det, col| {
-                det += m[(0, col)] * m.cofactor(0, col);
-                det
-            })
+            (0..m.dim()).fold(0.0, |det, col| det + m[(0, col)] * m.cofactor(0, col))
         }
     }
 
@@ -158,26 +153,20 @@ impl Matrix {
 
     pub fn inverse(&self) -> Self {
         assert!(self.is_invertible());
-
         let mut copy = Matrix::empty(self.dim(), self.dim());
-
         let det = self.determinant() as f64;
         for row in 0..copy.dim() {
             for col in 0..copy.dim() {
                 copy[(col, row)] = self.cofactor(row, col) as f64 / det;
             }
         }
-
         copy
     }
 }
 
-// Not sure if this is weird.
 impl Index<(usize, usize)> for Matrix {
     type Output = f64;
-
     fn index(&self, ixs: (usize, usize)) -> &f64 {
-        // TODO Convert `assert`s to `Result`s.
         assert!(ixs.0 < self.dims.0);
         assert!(ixs.1 < self.dims.1);
         &self.data[(ixs.0 * self.dims.0) + ixs.1]
@@ -186,7 +175,6 @@ impl Index<(usize, usize)> for Matrix {
 
 impl IndexMut<(usize, usize)> for Matrix {
     fn index_mut(&mut self, ixs: (usize, usize)) -> &mut f64 {
-        // TODO Convert `assert`s to `Result`s.
         assert!(ixs.0 < self.dims.0);
         assert!(ixs.1 < self.dims.1);
         &mut self.data[(ixs.0 * self.dims.0) + ixs.1]
@@ -195,11 +183,8 @@ impl IndexMut<(usize, usize)> for Matrix {
 
 pub fn matrix_mul(a: &Matrix, b: &Matrix) -> Matrix {
     let (num_rows, num_cols) = a.dims;
-
-    // TODO Convert `assert`s to `Result`s.
     assert!(num_rows == num_cols);
     assert!(a.dims == b.dims);
-
     let mut m = Matrix::empty(num_rows, num_cols);
     for row in 0..num_rows {
         for col in 0..num_cols {
@@ -209,16 +194,13 @@ pub fn matrix_mul(a: &Matrix, b: &Matrix) -> Matrix {
     m
 }
 
-// n.b. This is just a hack to potentially avoid a lot of costly allocations.
+// NB. This is just a hack to potentially avoid a lot of costly allocations.
 // also, it would normally be expected to hand in `a` as the same matrix as `m`
 // which I'm not sure bodes well for the borrow checker? Worth a try.
 pub fn matrix_mul_mut(a: &Matrix, b: &Matrix, m: &mut Matrix) {
     let (num_rows, num_cols) = a.dims;
-
-    // TODO Convert `assert`s to `Result`s.
     assert!(num_rows == num_cols);
     assert!(a.dims == b.dims);
-
     for row in 0..num_rows {
         for col in 0..num_cols {
             m[(row, col)] = (0..num_cols).fold(0.0, |acc, i| acc + a[(row, i)] * b[(i, col)]);

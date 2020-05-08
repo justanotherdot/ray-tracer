@@ -1,7 +1,3 @@
-#![feature(test)]
-
-extern crate test;
-
 use ray_tracer::{
     color::Color,
     coordinate::{Point, Vector},
@@ -128,16 +124,4 @@ pub fn main() -> std::io::Result<()> {
     };
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    //use super::*;
-    //use test::Bencher;
-
-    // old bencher test, replaced by criterion.
-    //#[bench]
-    //fn bench_trace(b: &mut Bencher) {
-    //b.iter(|| test::black_box(produce_world()));
-    //}
 }
