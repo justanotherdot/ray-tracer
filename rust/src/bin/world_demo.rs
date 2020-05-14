@@ -97,15 +97,14 @@ fn trace(width: usize, height: usize) -> Ppm {
 }
 
 pub fn main() -> std::io::Result<()> {
-    let guard = pprof::ProfilerGuard::new(100).unwrap();
-
     let ppm = trace(200, 100);
     let mut file = File::create("world_demo.ppm")?;
     file.write_all(ppm.blob().as_bytes())?;
 
     let disabled = true;
-    if let Ok(report) = guard.report().build() {
-        if !disabled {
+    if !disabled {
+        let guard = pprof::ProfilerGuard::new(100).unwrap();
+        if let Ok(report) = guard.report().build() {
             // NB. below requires the flamegraph feature to be on.
             // but it is not compatible with protobuf feature.
             //let file = File::create("flamegraph.pprof.svg").unwrap();
