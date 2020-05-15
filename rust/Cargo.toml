@@ -19,9 +19,9 @@ panic = "abort"
 #codegen-units = 1
 #rustflags = ["-C", "target-cpu=native"]
 
-[profile.bench]
-debug = true
-lto = true
+#[profile.bench]
+#debug = true
+#lto = true
 
 [[bench]]
 name = "world_demo_bench"
