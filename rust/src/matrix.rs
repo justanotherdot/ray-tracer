@@ -120,17 +120,19 @@ impl Matrix {
             dims: (dim - 1, dim - 1),
             data: [0_f64; 16],
         };
-        let mut target = 0;
-        self.data.iter().enumerate().for_each(|(ix, cell)| {
-            let col = ix % dim;
-            let row = ix / dim;
-            if col != exc_col && row != exc_row {
-                if let Some(cpy) = m.data.get_mut(target) {
-                    *cpy = *cell;
-                    target += 1;
-                }
-            }
-        });
+        self.data
+            .iter()
+            .enumerate()
+            .filter(|(ix, _)| {
+                let col = ix % dim;
+                let row = ix / dim;
+                col != exc_col && row != exc_row
+            })
+            .map(|(_, cell)| cell)
+            .enumerate()
+            .for_each(|(ix, cell)| {
+                m.data[ix] = *cell;
+            });
         m
     }
 
