@@ -22,7 +22,7 @@ fn clamp_color(c: Color, lower_bound: f64, upper_bound: f64) -> (f64, f64, f64) 
 
 // TODO This could use a fair bit of refactoring.
 // TODO Make this a method on Canvas, `to_ppm`.
-pub fn canvas_to_ppm(canvas: Canvas) -> Ppm {
+pub fn canvas_to_ppm(canvas: &Canvas) -> Ppm {
     // Header.
     // Would be initial string to fold.
 
@@ -80,7 +80,7 @@ mod test {
     #[test]
     fn constructing_the_ppm_header() {
         let c = Canvas::new(5, 3);
-        let ppm = canvas_to_ppm(c);
+        let ppm = canvas_to_ppm(&c);
         let blob = ppm.blob();
         let actual: Vec<&str> = blob.lines().collect();
         let expected = vec!["P3", "5 3", "255"];
@@ -91,7 +91,7 @@ mod test {
     fn contructing_the_ppm_pixel_data_01() {
         let mut c = Canvas::new(1, 1);
         c.write_pixel(0, 0, Color::new(1.5, 0., 0.));
-        let ppm = canvas_to_ppm(c);
+        let ppm = canvas_to_ppm(&c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
         let rhs = vec!["255 0 0"];
@@ -104,7 +104,7 @@ mod test {
         c.write_pixel(0, 0, Color::new(1.0, 0.0, 0.0));
         c.write_pixel(0, 1, Color::new(0.0, 1.0, 0.0));
         c.write_pixel(0, 2, Color::new(0.0, 0.0, 1.0));
-        let ppm = canvas_to_ppm(c);
+        let ppm = canvas_to_ppm(&c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
         let rhs = vec!["255 0 0", "0 255 0", "0 0 255"];
@@ -117,7 +117,7 @@ mod test {
         c.write_pixel(0, 0, Color::new(1.5, 0., 0.));
         c.write_pixel(2, 1, Color::new(0., 0.5, 0.));
         c.write_pixel(4, 2, Color::new(-0.5, 0., 1.));
-        let ppm = canvas_to_ppm(c);
+        let ppm = canvas_to_ppm(&c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
         let rhs = vec![
@@ -132,7 +132,7 @@ mod test {
     fn splitting_long_lines_in_ppm_files() {
         let mut c = Canvas::new(10, 2);
         c.fill(Color::new(1.0, 0.8, 0.6));
-        let ppm = canvas_to_ppm(c);
+        let ppm = canvas_to_ppm(&c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
         let rhs = vec![
@@ -147,7 +147,7 @@ mod test {
     #[test]
     fn ppm_files_are_terminated_by_a_newline_character() {
         let c = Canvas::new(5, 3);
-        let ppm = canvas_to_ppm(c);
+        let ppm = canvas_to_ppm(&c);
         let last_char = ppm.blob().pop();
         assert_eq!(last_char, Some('\n'));
     }

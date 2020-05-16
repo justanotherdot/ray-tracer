@@ -1,7 +1,11 @@
 #!/bin/sh -eux
 
-RUSTFLAGS="-C target-cpu=native" cargo build --release
-#perf record --call-graph dwarf target/release/world_demo
-perf record --call-graph lbr target/release/world_demo
+TARGET="$*"
+
+#RUSTFLAGS="-C target-cpu=native" cargo build --release
+# also accepts `dwarf'
+#perf record --call-graph lbr target/release/world_demo
+
+perf record --call-graph lbr -- $TARGET
 perf script | inferno-collapse-perf > stacks.folded
 cat stacks.folded | inferno-flamegraph > flamegraph.svg

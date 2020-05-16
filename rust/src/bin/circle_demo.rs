@@ -2,7 +2,7 @@ use ray_tracer::canvas::Canvas;
 use ray_tracer::color::Color;
 use ray_tracer::coordinate::Point;
 use ray_tracer::ppm::Ppm;
-use ray_tracer::ray::{Ray, Sphere};
+use ray_tracer::ray::{Intersections, Ray, Sphere};
 use ray_tracer::transformation::Transformation;
 use std::fs::File;
 use std::io::prelude::*;
@@ -32,7 +32,7 @@ fn trace() -> Ppm {
             let world_x = -half_wall_size + pixel_size * x as f64;
             let pos = Point::new(world_x, world_y, wall_z);
             let r = Ray::new(ray_origin, (pos - ray_origin).normalize());
-            let xs = s.intersect(&r);
+            let xs: Intersections = s.intersect(&r).into();
 
             if xs.hit().is_some() {
                 canvas.write_pixel(x, y, ray_strike_color.clone());

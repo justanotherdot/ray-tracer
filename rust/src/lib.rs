@@ -1,3 +1,5 @@
+#![feature(core_intrinsics)]
+
 pub mod canvas;
 pub mod color;
 pub mod coordinate;

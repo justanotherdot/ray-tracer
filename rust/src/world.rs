@@ -62,15 +62,15 @@ impl Default for World {
 }
 
 pub fn intersect_world(w: &World, r: &Ray) -> Intersections {
-    let sv = smallvec![];
-    let mut is = w.objects.iter().fold(sv, |mut acc, o| {
-        acc.extend(o.intersect(&r));
-        acc
-    });
-
-    is.sort();
-
-    Intersections::from_smallvec(is)
+    let mut sv = SmallVec::new();
+    w.objects
+        .iter()
+        .filter_map(|o| o.intersect(&r))
+        .for_each(|(i1, i2)| {
+            sv.push(i1);
+            sv.push(i2);
+        });
+    Intersections::from_smallvec(sv)
 }
 
 pub fn color_at(w: &World, r: &Ray) -> Color {
@@ -199,9 +199,8 @@ impl Camera {
         Ray::new(origin, direction)
     }
 
-    pub fn render(&self, world: World) -> Canvas {
+    pub fn render(&self, world: &World) -> Canvas {
         let mut image = Canvas::new(self.hsize, self.vsize);
-
         for y in 0..self.vsize - 1 {
             for x in 0..self.hsize - 1 {
                 let ray = self.ray_for_pixel(x, y);
@@ -475,7 +474,7 @@ mod test {
         let to = Point::new(0., 0., 0.);
         let up = Vector::new(0., 1., 0.);
         c.transform = view_transform(from, to, up);
-        let image = c.render(w);
+        let image = c.render(&w);
         assert_eq!(image.pixel_at(5, 5), &Color::new(0.38066, 0.47583, 0.2855));
     }
 

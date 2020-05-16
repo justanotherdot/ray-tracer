@@ -111,24 +111,22 @@ impl Sphere {
         }
     }
 
-    pub fn intersect(&self, r: &Ray) -> Intersections {
+    pub fn intersect(&self, r: &Ray) -> Option<(Intersection, Intersection)> {
         let r = r.transform(self.transform.inverse());
         let sphere_to_ray = r.origin().clone() - Point::new(0., 0., 0.);
-
-        let a = r.direction().clone().dot(&r.direction().clone());
-        let b = 2. * r.direction().clone().dot(&sphere_to_ray);
+        let a = r.direction().dot(&r.direction());
+        let b = 2. * r.direction().dot(&sphere_to_ray);
         let c = sphere_to_ray.dot(&sphere_to_ray) - 1.;
-
         let discriminant = b.powf(2.) - 4. * a * c;
-
         if discriminant < 0.0 {
-            intersections![]
+            None
         } else {
-            let t1 = ((-b) - discriminant.sqrt()) / (2. * a);
-            let t2 = ((-b) + discriminant.sqrt()) / (2. * a);
+            let discriminant_sqrt = discriminant.sqrt();
+            let t1 = ((-b) - discriminant_sqrt) / (2. * a);
+            let t2 = ((-b) + discriminant_sqrt) / (2. * a);
             let i1 = Intersection::new(t1, &self);
             let i2 = Intersection::new(t2, &self);
-            intersections![i1, i2]
+            Some((i1, i2))
         }
     }
 
@@ -149,20 +147,33 @@ impl Intersection {
     }
 }
 
+impl From<Option<(Intersection, Intersection)>> for Intersections {
+    fn from(pair: Option<(Intersection, Intersection)>) -> Self {
+        match pair {
+            Some((i1, i2)) => intersections![i1, i2],
+            None => intersections![],
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct Intersections(SmallVec<[Intersection; 64]>);
+pub struct Intersections(SmallVec<[Intersection; 8]>);
 
 impl Intersections {
-    pub fn from_vec(v: Vec<Intersection>) -> Intersections {
-        let mut v1 = v.clone();
-        v1.sort();
-        Intersections(SmallVec::from_vec(v1))
+    pub fn from_vec(mut v: Vec<Intersection>) -> Intersections {
+        v.sort();
+        Intersections(SmallVec::from_vec(v))
     }
 
-    pub fn from_smallvec(sv: SmallVec<[Intersection; 64]>) -> Intersections {
-        let mut sv1 = sv.clone();
-        sv1.sort();
-        Intersections(sv1)
+    pub fn from_smallvec(mut sv: SmallVec<[Intersection; 8]>) -> Intersections {
+        sv.sort();
+        Intersections(sv)
+    }
+
+    pub fn from_buf(buf: [Intersection; 8]) -> Intersections {
+        let mut sv = SmallVec::from_buf(buf);
+        sv.sort();
+        Intersections(sv)
     }
 
     pub fn count(&self) -> usize {
@@ -184,7 +195,7 @@ impl Intersections {
 
 impl IntoIterator for Intersections {
     type Item = Intersection;
-    type IntoIter = smallvec::IntoIter<[Intersection; 64]>;
+    type IntoIter = smallvec::IntoIter<[Intersection; 8]>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -220,7 +231,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, 4.0);
         assert_eq!(xs.get(1).unwrap().t, 6.0);
@@ -231,7 +242,7 @@ mod test {
         let r = Ray::new(Point::new(0., 1., -5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, 5.0);
         assert_eq!(xs.get(1).unwrap().t, 5.0);
@@ -242,7 +253,7 @@ mod test {
         let r = Ray::new(Point::new(0., 2., -5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         assert_eq!(xs.count(), 0);
     }
 
@@ -251,7 +262,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., 0.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, -1.0);
         assert_eq!(xs.get(1).unwrap().t, 1.0);
@@ -262,7 +273,7 @@ mod test {
         let r = Ray::new(Point::new(0., 0., 5.), Vector::new(0., 0., 1.));
         // TODO This needs a better way to ensure distinctness.
         let s = Sphere::new(0);
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, -6.0);
         assert_eq!(xs.get(1).unwrap().t, -4.0);
@@ -291,7 +302,7 @@ mod test {
     fn intersect_sets_the_object_on_the_intersection() {
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
         let s = Sphere::new(0);
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         let rc = Rc::new(s.clone());
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().object, rc);
@@ -379,7 +390,7 @@ mod test {
         let mut s = Sphere::new(0);
         let t = Transformation::new().scale(2., 2., 2.).build();
         s.set_transform(t.clone());
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         assert_eq!(xs.count(), 2);
         assert_eq!(xs.get(0).unwrap().t, 3.);
         assert_eq!(xs.get(1).unwrap().t, 7.);
@@ -391,7 +402,7 @@ mod test {
         let mut s = Sphere::new(0);
         let t = Transformation::new().translate(5., 0., 0.).build();
         s.set_transform(t.clone());
-        let xs = s.intersect(&r);
+        let xs: Intersections = s.intersect(&r).into();
         assert_eq!(xs.count(), 0);
     }
 

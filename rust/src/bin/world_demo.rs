@@ -92,12 +92,16 @@ fn trace(width: usize, height: usize) -> Ppm {
         Point::new(0., 1., 0.),
         Vector::new(0., 1., 0.),
     );
-    let canvas = c.render(w);
+    let canvas = c.render(&w);
     canvas.to_ppm()
 }
 
 pub fn main() -> std::io::Result<()> {
-    let ppm = trace(200, 100);
+    //let width = 200;
+    //let height = 100;
+    let width = 200;
+    let height = 100;
+    let ppm = trace(width, height);
     let mut file = File::create("world_demo.ppm")?;
     file.write_all(ppm.blob().as_bytes())?;
 

@@ -1,6 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use ray_tracer::{
+    canvas::Canvas,
     color::Color,
     coordinate::{Point, Vector},
     ppm::Ppm,
@@ -84,7 +85,7 @@ fn produce_world() -> World {
     w
 }
 
-fn trace(width: usize, height: usize) -> Ppm {
+fn render_setup(width: usize, height: usize) -> (World, Camera) {
     let w = produce_world();
     let mut c = Camera::new(width, height, PI / 3.0);
     c.transform = world::view_transform(
@@ -92,23 +93,34 @@ fn trace(width: usize, height: usize) -> Ppm {
         Point::new(0., 1., 0.),
         Vector::new(0., 1., 0.),
     );
-    let canvas = c.render(w);
+    (w, c)
+}
+
+fn render(w: &World, c: &Camera) -> Canvas {
+    c.render(&w)
+}
+
+fn to_ppm(canvas: &Canvas) -> Ppm {
     canvas.to_ppm()
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("produce_world world-demo 30x15", |b| {
-        b.iter(|| black_box(produce_world()))
-    });
+    c.bench_function("produce_world", |b| b.iter(|| black_box(produce_world())));
 
-    c.bench_function("trace world-demo 30x15", |b| {
-        b.iter(|| black_box(trace(200, 100)))
-    });
+    //let (world, camera) = render_setup(200, 100);
+    //c.bench_function("render", |b| b.iter(|| black_box(render(&world, &camera))));
+
+    let (world, camera) = render_setup(10, 5);
+    c.bench_function("render", |b| b.iter(|| black_box(render(&world, &camera))));
+
+    let canvas = render(&world, &camera);
+    c.bench_function("to_ppm", |b| b.iter(|| black_box(to_ppm(&canvas))));
 }
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().sample_size(10);
+    //config = Criterion::default().sample_size(10);
+    config = Criterion::default().sample_size(100); // default.
     targets = criterion_benchmark
 );
 criterion_main!(benches);

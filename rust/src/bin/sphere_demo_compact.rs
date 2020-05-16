@@ -29,7 +29,7 @@ fn trace() -> Ppm {
     let up = Vector::new(0., 1., 0.);
     c.transform = world::view_transform(from, to, up);
 
-    let canvas = c.render(w);
+    let canvas = c.render(&w);
 
     canvas.to_ppm()
 }

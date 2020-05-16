@@ -59,7 +59,7 @@ impl Canvas {
         rv
     }
 
-    pub fn to_ppm(self) -> Ppm {
+    pub fn to_ppm(&self) -> Ppm {
         ppm::canvas_to_ppm(self)
     }
 

@@ -3,8 +3,7 @@ use crate::naive_cmp::naive_approx_equal_float;
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut, Mul};
 
-#[allow(dead_code)]
-fn identity_matrix_from_dims(num_rows: usize, num_cols: usize) -> Matrix {
+pub fn identity_matrix_from_dims(num_rows: usize, num_cols: usize) -> Matrix {
     assert!(num_rows == num_cols);
     let dim = num_rows;
     (0..dim).fold(Matrix::empty(dim, dim), |mut m, i| {
@@ -14,9 +13,10 @@ fn identity_matrix_from_dims(num_rows: usize, num_cols: usize) -> Matrix {
 }
 
 /// Generate an identity matrix with the same dimensions as this Matrix.
-fn identity_matrix_from_square_matrix(m: &Matrix) -> Matrix {
+pub fn identity_matrix_from_square_matrix(m: &Matrix) -> Matrix {
     assert!(m.dims.0 == m.dims.1);
     let dim = m.dims.0;
+    // NB. could also write directly to 0, 5, 10, 15
     (0..dim).fold(Matrix::empty(dim, dim), |mut m, i| {
         m[(i, i)] = 1.;
         m
@@ -27,10 +27,8 @@ fn identity_matrix_from_square_matrix(m: &Matrix) -> Matrix {
 // TODO: const generics would be handy to express the MxN lengths at the type level.
 #[derive(Debug, Clone)]
 pub struct Matrix {
-    #[allow(dead_code)]
-    dims: (usize, usize),
-    #[allow(dead_code)]
-    data: [f64; 16],
+    pub dims: (usize, usize),
+    pub data: [f64; 16],
 }
 
 impl PartialEq for Matrix {
@@ -56,6 +54,7 @@ impl IdentityMatrix for Matrix {
 }
 
 impl Matrix {
+    #[inline(always)]
     pub fn empty(num_rows: usize, num_cols: usize) -> Self {
         Matrix {
             dims: (num_rows, num_cols),
@@ -63,6 +62,7 @@ impl Matrix {
         }
     }
 
+    #[inline(always)]
     pub fn dim(&self) -> usize {
         self.dims.0
     }
@@ -88,9 +88,10 @@ impl Matrix {
         Self::from_vec(vec)
     }
 
+    #[inline(always)]
     pub fn transpose(&self) -> Self {
         let dim = self.dim();
-        let mut m = self.clone();
+        let mut m = Matrix::empty(dim, dim);
         for row in 0..dim {
             for col in 0..dim {
                 m[(col, row)] = self[(row, col)];
@@ -99,21 +100,37 @@ impl Matrix {
         m
     }
 
+    #[inline(always)]
     pub fn determinant(&self) -> f64 {
         let m = self;
-        if m.dim() == 2 {
-            let a = m[(0, 0)];
-            let b = m[(0, 1)];
-            let c = m[(1, 0)];
-            let d = m[(1, 1)];
-            a * d - b * c
+        let dim = self.dim();
+        if dim == 2 {
+            let a = m.data[0]; // [(0, 0)]
+            let b = m.data[1]; // [(0, 1)]
+            let c = m.data[2]; // [(1, 0)]
+            let d = m.data[3]; // [(1, 1)]
+            unsafe {
+                //a * d - b * c
+                let x = std::intrinsics::fmul_fast(a, d);
+                let y = std::intrinsics::fmul_fast(b, c);
+                std::intrinsics::fsub_fast(x, y)
+            }
         } else {
-            (0..m.dim()).fold(0.0, |det, col| det + m[(0, col)] * m.cofactor(0, col))
+            // NB.
+            // we could specialize these cases for 3x3 and 4x4.
+            // for the moment we inline aggressively.
+            let mut det = 0.0;
+            (0..dim).for_each(|col| {
+                //det + m.data[col] * m.cofactor(0, col)
+                det = m.data[col].mul_add(m.cofactor(0, col), det);
+            });
+            det
         }
     }
 
     /// submatrix deletes exactly one row and one column,
     /// effectively reducing the dimension by one.
+    #[inline(always)]
     pub fn submatrix(&self, exc_row: usize, exc_col: usize) -> Self {
         let dim = self.dim();
         let mut m = Matrix {
@@ -124,9 +141,11 @@ impl Matrix {
             .iter()
             .enumerate()
             .filter(|(ix, _)| {
+                // NB.
+                // There might be a simpler, bit-level comparison we can perform here.
                 let col = ix % dim;
                 let row = ix / dim;
-                col != exc_col && row != exc_row
+                !(col == exc_col || row == exc_row)
             })
             .map(|(_, cell)| cell)
             .enumerate()
@@ -136,32 +155,41 @@ impl Matrix {
         m
     }
 
+    #[inline(always)]
     pub fn minor(&self, exc_row: usize, exc_col: usize) -> f64 {
         self.submatrix(exc_row, exc_col).determinant()
     }
 
+    #[inline(always)]
     pub fn cofactor(&self, exc_row: usize, exc_col: usize) -> f64 {
         let factor = if (exc_row + exc_col) % 2 == 1 {
             -1.0
         } else {
             1.0
         };
-        factor * self.minor(exc_row, exc_col)
+        unsafe { std::intrinsics::fmul_fast(factor, self.minor(exc_row, exc_col)) }
+        //factor * self.minor(exc_row, exc_col)
     }
 
+    #[inline(always)]
     pub fn is_invertible(&self) -> bool {
         self.determinant() != 0.
     }
 
+    #[inline(always)]
     pub fn inverse(&self) -> Self {
-        assert!(self.is_invertible());
-        let mut copy = Matrix::empty(self.dim(), self.dim());
         let det = self.determinant() as f64;
-        for row in 0..copy.dim() {
-            for col in 0..copy.dim() {
-                copy[(col, row)] = self.cofactor(row, col) as f64 / det;
-            }
-        }
+        assert!(det != 0.); // is invertible.
+        let dim = self.dim();
+        let mut copy = Matrix::empty(dim, dim);
+        (0..dim * dim).for_each(|ix| {
+            let col = ix % dim;
+            let row = ix / dim;
+            let target_ix = col * dim + row;
+            let cofactor = self.cofactor(row, col);
+            copy.data[target_ix] = unsafe { std::intrinsics::fdiv_fast(cofactor, det) };
+            //copy.data[target_ix] = cofactor / det;
+        });
         copy
     }
 }
