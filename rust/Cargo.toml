@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 smallvec = "0.6.10"
-proptest = "0.9.6"
+proptest = "0.10.0"
 criterion = "0.3"
 pprof = { version = "0.3", features = ["protobuf"] }
 # This is useful for ray intersections, but should be compared against smallvec
