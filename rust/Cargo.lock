@@ -511,7 +511,7 @@ dependencies = [
 
 [[package]]
 name = "pprof"
-version = "0.3.17"
+version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "backtrace 0.3.41 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -758,7 +758,7 @@ name = "ray-tracer"
 version = "0.1.0"
 dependencies = [
  "criterion 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "pprof 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pprof 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1230,7 +1230,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum parking_lot_core 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c361aa727dd08437f2f1447be8b59a33b0edd15e0fcee698f935613d9efbca9b"
 "checksum petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "29c127eea4a29ec6c85d153c59dc1213f33ec74cead30fe4730aecc88cc1fd92"
 "checksum plotters 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)" = "f9b1d9ca091d370ea3a78d5619145d1b59426ab0c9eedbad2514a4cee08bf389"
-"checksum pprof 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)" = "b220b3619032fb17a2ffc86a8eaa570810490c79367c823731841b636807d821"
+"checksum pprof 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)" = "53d27a595ff6b6fb3682cc3cea1940860f8d99f91fb849cff82f0315384c7609"
 "checksum ppv-lite86 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "74490b50b9fbe561ac330df47c08f3f33073d2d00c150f719147d7c54522fa1b"
 "checksum proc-macro2 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)" = "8872cf6f48eee44265156c111456a700ab3483686b3f96df4cf5481c89157319"
 "checksum proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)" = "01c477819b845fe023d33583ebf10c9f62518c8d79a0960ba5c36d6ac8a55a5b"
