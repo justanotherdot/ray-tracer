@@ -1,0 +1,17 @@
+version: 2
+updates:
+- package-ecosystem: cargo
+  directory: "/rust"
+  schedule:
+    interval: daily
+    time: "19:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: pprof
+    versions:
+    - 0.4.0
+    - 0.4.1
+    - 0.4.2
+  - dependency-name: proptest
+    versions:
+    - 0.10.1
