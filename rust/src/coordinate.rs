@@ -111,10 +111,9 @@ impl Index<usize> for Vector {
             1 => &self.y,
             2 => &self.z,
             3 => &self.w,
-            _ => panic!(format!(
-                "index out of bounds: the len is 4 but the index is {}",
+            _ => panic!("index out of bounds: the len is 4 but the index is {}",
                 ix
-            )),
+            ),
         }
     }
 }
@@ -127,10 +126,9 @@ impl IndexMut<usize> for Vector {
             1 => &mut self.y,
             2 => &mut self.z,
             3 => &mut self.w,
-            _ => panic!(format!(
-                "index out of bounds: the len is 4 but the index is {}",
+            _ => panic!("index out of bounds: the len is 4 but the index is {}",
                 ix
-            )),
+            ),
         }
     }
 }
@@ -145,10 +143,10 @@ impl Index<usize> for Point {
             1 => &self.y,
             2 => &self.z,
             3 => &self.w,
-            _ => panic!(format!(
+            _ => panic!(
                 "index out of bounds: the len is 4 but the index is {}",
                 ix
-            )),
+            ),
         }
     }
 }
@@ -161,10 +159,10 @@ impl IndexMut<usize> for Point {
             1 => &mut self.y,
             2 => &mut self.z,
             3 => &mut self.w,
-            _ => panic!(format!(
+            _ => panic!(
                 "index out of bounds: the len is 4 but the index is {}",
                 ix
-            )),
+            ),
         }
     }
 }
