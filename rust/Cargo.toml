@@ -8,7 +8,7 @@ edition = "2018"
 smallvec = "0.6.10"
 proptest = "0.9.6"
 criterion = "0.3"
-pprof = { version = "0.3", features = ["protobuf"] }
+pprof = { version = "0.9", features = ["protobuf"] }
 # This is useful for ray intersections, but should be compared against smallvec
 #binary-heap-plus = "0.2.0"
 
