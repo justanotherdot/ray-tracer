@@ -2,7 +2,6 @@ use crate::coordinate::{Point, Vector};
 use crate::matrix::{IdentityMatrix, Matrix};
 use crate::naive_cmp;
 use crate::shader::Material;
-use smallvec::*;
 use std::cmp::{Eq, Ord, Ordering, PartialEq};
 use std::default::Default;
 use std::rc::Rc;
@@ -57,9 +56,10 @@ pub struct Sphere {
 macro_rules! intersections {
     ($($e:expr),*) => {
         {
-            let mut xs = smallvec![$($e),*];
+            let mut xs = Intersections::new();
+            $(xs.push($e);)*
             xs.sort();
-            Intersections(xs)
+            xs
         }
     };
 }
@@ -82,7 +82,7 @@ impl Eq for Intersection {}
 
 impl PartialOrd for Intersection {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(naive_cmp::naive_approx_float_cmp(&self.t, &other.t))
+        Some(self.cmp(other))
     }
 }
 
@@ -113,10 +113,10 @@ impl Sphere {
 
     pub fn intersect(&self, r: &Ray) -> Intersections {
         let r = r.transform(self.transform.inverse());
-        let sphere_to_ray = r.origin().clone() - Point::new(0., 0., 0.);
+        let sphere_to_ray = *r.origin() - Point::new(0., 0., 0.);
 
-        let a = r.direction().clone().dot(&r.direction().clone());
-        let b = 2. * r.direction().clone().dot(&sphere_to_ray);
+        let a = r.direction().dot(r.direction());
+        let b = 2. * r.direction().dot(&sphere_to_ray);
         let c = sphere_to_ray.dot(&sphere_to_ray) - 1.;
 
         let discriminant = b.powf(2.) - 4. * a * c;
@@ -126,8 +126,8 @@ impl Sphere {
         } else {
             let t1 = ((-b) - discriminant.sqrt()) / (2. * a);
             let t2 = ((-b) + discriminant.sqrt()) / (2. * a);
-            let i1 = Intersection::new(t1, &self);
-            let i2 = Intersection::new(t2, &self);
+            let i1 = Intersection::new(t1, self);
+            let i2 = Intersection::new(t2, self);
             intersections![i1, i2]
         }
     }
@@ -150,44 +150,101 @@ impl Intersection {
 }
 
 #[derive(Debug, Clone)]
-pub struct Intersections(SmallVec<[Intersection; 64]>);
+pub struct Intersections {
+    data: [Option<Intersection>; 64],
+    count: usize,
+}
 
 impl Intersections {
-    pub fn from_vec(v: Vec<Intersection>) -> Intersections {
-        let mut v1 = v.clone();
-        v1.sort();
-        Intersections(SmallVec::from_vec(v1))
+    pub fn new() -> Self {
+        Self {
+            data: [const { None }; 64],
+            count: 0,
+        }
     }
 
-    pub fn from_smallvec(sv: SmallVec<[Intersection; 64]>) -> Intersections {
-        let mut sv1 = sv.clone();
-        sv1.sort();
-        Intersections(sv1)
+    pub fn from_vec(v: Vec<Intersection>) -> Intersections {
+        let mut result = Self::new();
+        for intersection in v {
+            result.push(intersection);
+        }
+        result.sort();
+        result
+    }
+
+    pub fn push(&mut self, intersection: Intersection) {
+        if self.count < 64 {
+            self.data[self.count] = Some(intersection);
+            self.count += 1;
+        }
+    }
+
+    pub fn extend<I: IntoIterator<Item = Intersection>>(&mut self, iter: I) {
+        for intersection in iter {
+            self.push(intersection);
+        }
+    }
+
+    pub fn sort(&mut self) {
+        // Sort only the occupied slots
+        let mut temp: Vec<Intersection> = self.data[..self.count]
+            .iter()
+            .filter_map(|opt| opt.as_ref().cloned())
+            .collect();
+        temp.sort();
+
+        // Clear and repopulate
+        self.data = [const { None }; 64];
+        self.count = 0;
+        for intersection in temp {
+            self.push(intersection);
+        }
     }
 
     pub fn count(&self) -> usize {
-        self.0.len()
+        self.count
     }
 
     pub fn hit(&self) -> Option<&Intersection> {
-        self.0.iter().filter(|i| i.t >= 0.).nth(0)
+        self.data[..self.count]
+            .iter()
+            .filter_map(|opt| opt.as_ref())
+            .find(|i| i.t >= 0.)
     }
 
     pub fn get(&self, ix: usize) -> Option<&Intersection> {
-        self.0.iter().nth(ix)
+        if ix < self.count {
+            self.data[ix].as_ref()
+        } else {
+            None
+        }
     }
 
-    pub fn iter(&self) -> std::slice::Iter<Intersection> {
-        self.0.iter()
+    pub fn iter(&self) -> impl Iterator<Item = &Intersection> {
+        self.data[..self.count]
+            .iter()
+            .filter_map(|opt| opt.as_ref())
+    }
+}
+
+impl Default for Intersections {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl IntoIterator for Intersections {
     type Item = Intersection;
-    type IntoIter = smallvec::IntoIter<[Intersection; 64]>;
+    type IntoIter = std::vec::IntoIter<Intersection>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
+        let mut vec = Vec::with_capacity(self.count);
+        for i in 0..self.count {
+            if let Some(intersection) = self.data[i].clone() {
+                vec.push(intersection);
+            }
+        }
+        vec.into_iter()
     }
 }
 

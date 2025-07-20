@@ -76,7 +76,7 @@ pub fn is_shadowed(world: &World, point: &Point) -> bool {
             let v = sub_point_by_ref(&light.position, point);
             let distance = v.magnitude();
             let direction = v.normalize();
-            let r = Ray::new(point.clone(), direction);
+            let r = Ray::new(*point, direction);
             let intersections = world.intersect(&r);
             let h = intersections.hit();
             match h {
@@ -96,9 +96,9 @@ pub fn lighting(
     in_shadow: bool,
 ) -> Color {
     let effective_color = mul_color(&material.color, &light.intensity);
-    let lightv = sub_point_by_ref(&light.position, &point).normalize();
+    let lightv = sub_point_by_ref(&light.position, point).normalize();
     let ambient = effective_color.clone() * material.ambient;
-    let light_dot_normal = lightv.dot(&normalv);
+    let light_dot_normal = lightv.dot(normalv);
     let black = Color::new(0., 0., 0.);
     let mut diffuse;
     let mut specular;
@@ -108,7 +108,7 @@ pub fn lighting(
     } else {
         diffuse = effective_color * material.diffuse * light_dot_normal;
         let reflectv = (-lightv).reflect(normalv);
-        let reflect_dot_eye = reflectv.dot(&eyev);
+        let reflect_dot_eye = reflectv.dot(eyev);
 
         if reflect_dot_eye <= 0. {
             specular = black;
@@ -156,14 +156,14 @@ mod test {
     fn the_normal_on_a_sphere_at_a_nonaxial_point() {
         let s = Sphere::new(0);
         let n = s.normal_at(Point::new(
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
         ));
         let v = Vector::new(
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
         );
         assert_eq!(n, v);
     }
@@ -172,14 +172,14 @@ mod test {
     fn the_normal_is_a_normalized_vector() {
         let s = Sphere::new(0);
         let n = s.normal_at(Point::new(
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
         ));
         let v = Vector::new(
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
-            (3.0 as f64).sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
+            3.0_f64.sqrt() / 3.,
         );
         assert_eq!(n, v.normalize());
     }
@@ -188,8 +188,16 @@ mod test {
     fn computing_the_normal_on_a_translated_sphere() {
         let mut s = Sphere::new(0);
         s.set_transform(Transformation::new().translate(0., 1., 0.).build());
-        let n = s.normal_at(Point::new(0., 1.70711, -0.70711));
-        let v = Vector::new(0., 0.70711, -0.70711);
+        let n = s.normal_at(Point::new(
+            0.,
+            1.0 + std::f64::consts::FRAC_1_SQRT_2,
+            -std::f64::consts::FRAC_1_SQRT_2,
+        ));
+        let v = Vector::new(
+            0.,
+            std::f64::consts::FRAC_1_SQRT_2,
+            -std::f64::consts::FRAC_1_SQRT_2,
+        );
         assert_eq!(n, v);
     }
 
@@ -202,11 +210,7 @@ mod test {
                 .scale(1., 0.5, 1.)
                 .build(),
         );
-        let n = s.normal_at(Point::new(
-            0.,
-            (2. as f64).sqrt() / 2.,
-            -((2. as f64).sqrt() / 2.),
-        ));
+        let n = s.normal_at(Point::new(0., 2_f64.sqrt() / 2., -(2_f64.sqrt() / 2.)));
         let v = Vector::new(0., 0.97014, -0.24254);
         assert_eq!(n, v);
     }
@@ -222,7 +226,7 @@ mod test {
     #[test]
     fn reflecting_a_vector_off_a_slanted_surface() {
         let v = Vector::new(0., -1., 0.);
-        let n = Vector::new((2 as f64).sqrt() / 2., (2 as f64).sqrt() / 2., 0.);
+        let n = Vector::new(2_f64.sqrt() / 2., 2_f64.sqrt() / 2., 0.);
         let r = v.reflect(&n);
         assert_eq!(r, Vector::new(1., 0., 0.));
     }
@@ -231,7 +235,7 @@ mod test {
     fn a_point_light_has_a_position_and_intensity() {
         let intensity = Color::new(1., 1., 1.);
         let position = Point::new(0., 0., 0.);
-        let light = PointLight::new(position.clone(), intensity.clone());
+        let light = PointLight::new(position, intensity.clone());
         assert_eq!(light.position, position);
         assert_eq!(light.intensity, intensity);
     }
@@ -272,7 +276,7 @@ mod test {
         let m = Material::new();
         let position = Point::new(0., 0., 0.);
 
-        let root_two_on_two = (2 as f64).sqrt() / 2.;
+        let root_two_on_two = 2_f64.sqrt() / 2.;
         let eyev = Vector::new(0., root_two_on_two, -root_two_on_two);
         let normalv = Vector::new(0., 0., -1.);
         let light = PointLight::new(Point::new(0., 0., -10.), Color::new(1., 1., 1.));
@@ -299,7 +303,7 @@ mod test {
         let m = Material::new();
         let position = Point::new(0., 0., 0.);
 
-        let root_two_on_two = (2 as f64).sqrt() / 2.;
+        let root_two_on_two = 2_f64.sqrt() / 2.;
         let eyev = Vector::new(0., -root_two_on_two, -root_two_on_two);
         let normalv = Vector::new(0., 0., -1.);
         let light = PointLight::new(Point::new(0., 10., -10.), Color::new(1., 1., 1.));
@@ -339,7 +343,7 @@ mod test {
         let w: World = Default::default();
         let p = Point::new(0., 10., 0.);
 
-        assert_eq!(is_shadowed(&w, &p), false);
+        assert!(!is_shadowed(&w, &p));
     }
 
     #[test]
@@ -347,7 +351,7 @@ mod test {
         let w: World = Default::default();
         let p = Point::new(10., -10., 10.);
 
-        assert_eq!(is_shadowed(&w, &p), true);
+        assert!(is_shadowed(&w, &p));
     }
 
     #[test]
@@ -355,7 +359,7 @@ mod test {
         let w: World = Default::default();
         let p = Point::new(-20., 20., -20.);
 
-        assert_eq!(is_shadowed(&w, &p), false);
+        assert!(!is_shadowed(&w, &p));
     }
 
     #[test]
@@ -363,6 +367,6 @@ mod test {
         let w: World = Default::default();
         let p = Point::new(-2., 2., -2.);
 
-        assert_eq!(is_shadowed(&w, &p), false);
+        assert!(!is_shadowed(&w, &p));
     }
 }

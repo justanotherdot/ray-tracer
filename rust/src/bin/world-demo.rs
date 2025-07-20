@@ -69,12 +69,12 @@ fn produce_world() -> World {
     left.material.diffuse = 0.7;
     left.material.specular = 0.3;
 
-    w.objects.push(floor);
-    w.objects.push(left_wall);
-    w.objects.push(right_wall);
-    w.objects.push(middle);
-    w.objects.push(right);
-    w.objects.push(left);
+    w.add_object(floor);
+    w.add_object(left_wall);
+    w.add_object(right_wall);
+    w.add_object(middle);
+    w.add_object(right);
+    w.add_object(left);
 
     w.light = Some(PointLight::new(
         Point::new(-10., 10., -10.),
@@ -100,27 +100,6 @@ pub fn main() -> std::io::Result<()> {
     let ppm = trace(200, 100);
     let mut file = File::create("world_demo.ppm")?;
     file.write_all(ppm.blob().as_bytes())?;
-
-    let disabled = true;
-    if !disabled {
-        let guard = pprof::ProfilerGuard::new(100).unwrap();
-        if let Ok(report) = guard.report().build() {
-            // NB. below requires the flamegraph feature to be on.
-            // but it is not compatible with protobuf feature.
-            //let file = File::create("flamegraph.pprof.svg").unwrap();
-            //report.flamegraph(file).unwrap();
-            use pprof::protos::Message;
-
-            let mut file = File::create("profile.pb").unwrap();
-            let profile = report.pprof().unwrap();
-
-            let mut content = Vec::new();
-            profile.encode(&mut content).unwrap();
-            file.write_all(&content).unwrap();
-
-            println!("report: {}", &report);
-        }
-    };
 
     Ok(())
 }

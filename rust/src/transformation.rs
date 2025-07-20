@@ -10,6 +10,12 @@ pub struct Transformation(Vec<Matrix>);
 
 // Using this API may, unfortunately, be a bit costly.
 // But that hasn't been checked in any sane way (no benchmarks) so it might be fine!
+impl Default for Transformation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Transformation {
     pub fn new() -> Self {
         Transformation(vec![])

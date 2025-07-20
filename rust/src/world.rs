@@ -7,21 +7,36 @@ use crate::naive_cmp::F64_EPSILON;
 use crate::ray::{Intersection, Intersections, Ray, Sphere};
 use crate::shader::{is_shadowed, PointLight};
 use crate::transformation::Transformation;
-use smallvec::*;
 use std::default::Default;
 use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct World {
-    pub objects: SmallVec<[Sphere; 64]>,
+    pub objects: [Option<Sphere>; 64],
+    pub object_count: usize,
     pub light: Option<PointLight>,
 }
 
 impl World {
     pub fn new() -> World {
-        let objects = smallvec![];
-        let light = None;
-        World { objects, light }
+        World {
+            objects: [const { None }; 64],
+            object_count: 0,
+            light: None,
+        }
+    }
+
+    pub fn add_object(&mut self, object: Sphere) {
+        if self.object_count < 64 {
+            self.objects[self.object_count] = Some(object);
+            self.object_count += 1;
+        }
+    }
+
+    pub fn objects_iter(&self) -> impl Iterator<Item = &Sphere> {
+        self.objects[..self.object_count]
+            .iter()
+            .filter_map(|opt| opt.as_ref())
     }
 
     pub fn intersect(&self, r: &Ray) -> Intersections {
@@ -54,7 +69,8 @@ impl Default for World {
         let mut s2 = Sphere::new(1);
         s2.set_transform(Transformation::new().scale(0.5, 0.5, 0.5).build());
 
-        w.objects = smallvec![s1, s2];
+        w.add_object(s1);
+        w.add_object(s2);
         w.light = Some(light);
 
         w
@@ -62,21 +78,18 @@ impl Default for World {
 }
 
 pub fn intersect_world(w: &World, r: &Ray) -> Intersections {
-    let sv = smallvec![];
-    let mut is = w.objects.iter().fold(sv, |mut acc, o| {
-        acc.extend(o.intersect(&r));
-        acc
-    });
-
+    let mut is = Intersections::new();
+    for object in w.objects_iter() {
+        is.extend(object.intersect(r));
+    }
     is.sort();
-
-    Intersections::from_smallvec(is)
+    is
 }
 
 pub fn color_at(w: &World, r: &Ray) -> Color {
     let is = w.intersect(r);
     match is.hit() {
-        Some(hit) => shade_hit(w, &prepare_computations(&hit, &r)),
+        Some(hit) => shade_hit(w, &prepare_computations(hit, r)),
         None => Color::new(0., 0., 0.),
     }
 }
@@ -124,7 +137,7 @@ pub fn shade_hit(w: &World, c: &PreComp) -> Color {
     let light = w.light.as_ref().unwrap();
     c.object
         .material
-        .lighting(&light, &c.over_point, &c.eyev, &c.normalv, shadowed)
+        .lighting(light, &c.over_point, &c.eyev, &c.normalv, shadowed)
 }
 
 pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix {
@@ -163,7 +176,7 @@ impl Camera {
 
         // TODO: The abs delta of tan(pi/4) has rounding errors on
         // f64, so we go to f32 to flub it to a lower precision.
-        let half_view = (field_of_view as f32 / 2.0 as f32).tan() as f64;
+        let half_view = (field_of_view as f32 / 2.0_f32).tan() as f64;
 
         let aspect = hsize as f64 / vsize as f64;
 
@@ -202,8 +215,8 @@ impl Camera {
     pub fn render(&self, world: World) -> Canvas {
         let mut image = Canvas::new(self.hsize, self.vsize);
 
-        for y in 0..self.vsize - 1 {
-            for x in 0..self.hsize - 1 {
+        for y in 0..self.vsize {
+            for x in 0..self.hsize {
                 let ray = self.ray_for_pixel(x, y);
                 let color = world.color_at(&ray);
                 image.write_pixel(x, y, color);
@@ -225,7 +238,7 @@ mod test {
     #[test]
     fn creating_a_world() {
         let w = World::new();
-        assert!(w.objects.is_empty());
+        assert_eq!(w.object_count, 0);
         assert_eq!(w.light, None);
     }
 
@@ -244,8 +257,8 @@ mod test {
         let w: World = Default::default();
 
         assert_eq!(w.light, Some(light));
-        assert!(w.objects.iter().any(|x| *x == s1));
-        assert!(w.objects.iter().any(|x| *x == s2));
+        assert!(w.objects_iter().any(|x| *x == s1));
+        assert!(w.objects_iter().any(|x| *x == s2));
     }
 
     #[test]
@@ -283,7 +296,7 @@ mod test {
         let i = Intersection::new(4., &shape);
         let comps = prepare_computations(&i, &r);
 
-        assert_eq!(comps.inside, false);
+        assert!(!comps.inside);
     }
 
     #[test]
@@ -295,7 +308,7 @@ mod test {
 
         assert_eq!(comps.point, Point::new(0., 0., 1.));
         assert_eq!(comps.eyev, Vector::new(0., 0., -1.));
-        assert_eq!(comps.inside, true);
+        assert!(comps.inside);
         assert_eq!(comps.normalv, Vector::new(0., 0., -1.));
     }
 
@@ -303,7 +316,7 @@ mod test {
     fn shading_an_intersection() {
         let w: World = Default::default();
         let r = Ray::new(Point::new(0., 0., -5.), Vector::new(0., 0., 1.));
-        let shape = w.objects.get(0).unwrap();
+        let shape = w.objects_iter().next().unwrap();
         let i = Intersection::new(4., shape);
         let comps = prepare_computations(&i, &r);
         let c = shade_hit(&w, &comps);
@@ -313,13 +326,15 @@ mod test {
 
     #[test]
     fn shading_an_intersection_from_the_inside() {
-        let mut w: World = Default::default();
-        w.light = Some(PointLight::new(
-            Point::new(0., 0.25, 0.),
-            Color::new(1., 1., 1.),
-        ));
+        let w: World = World {
+            light: Some(PointLight::new(
+                Point::new(0., 0.25, 0.),
+                Color::new(1., 1., 1.),
+            )),
+            ..Default::default()
+        };
         let r = Ray::new(Point::new(0., 0., 0.), Vector::new(0., 0., 1.));
-        let shape = w.objects.get(1).unwrap();
+        let shape = w.objects_iter().nth(1).unwrap();
         let i = Intersection::new(0.5, shape);
         let comps = prepare_computations(&i, &r);
         let c = shade_hit(&w, &comps);
@@ -350,18 +365,20 @@ mod test {
         let mut w: World = Default::default();
 
         {
-            let outer = &mut w.objects[0];
-            outer.material.ambient = 1.;
+            if let Some(outer) = &mut w.objects[0] {
+                outer.material.ambient = 1.;
+            }
         }
         {
-            let inner = &mut w.objects[1];
-            inner.material.ambient = 1.;
+            if let Some(inner) = &mut w.objects[1] {
+                inner.material.ambient = 1.;
+            }
         }
 
         let r = Ray::new(Point::new(0., 0., 0.75), Vector::new(0., 0., -1.));
         let c = w.color_at(&r);
 
-        let inner = &w.objects[1];
+        let inner = w.objects[1].as_ref().unwrap();
 
         assert_eq!(&c, &inner.material.color);
     }
@@ -463,7 +480,7 @@ mod test {
         assert_eq!(r.origin, Point::new(0., 2., -5.));
         assert_eq!(
             r.direction,
-            Vector::new((2.0 as f64).sqrt() / 2., 0., -((2.0 as f64).sqrt() / 2.0))
+            Vector::new(2.0_f64.sqrt() / 2., 0., -(2.0_f64.sqrt() / 2.0))
         );
     }
 
@@ -489,7 +506,8 @@ mod test {
         let s1 = Sphere::new(0);
         let mut s2 = Sphere::new(1);
         s2.set_transform(Transformation::new().translate(0., 0., 10.).build());
-        w.objects = smallvec![s1, s2.clone()];
+        w.add_object(s1);
+        w.add_object(s2.clone());
         let r = Ray::new(Point::new(0., 0., 5.), Vector::new(0., 0., 1.));
         let i = Intersection::new(4., &s2);
         let comps = prepare_computations(&i, &r);

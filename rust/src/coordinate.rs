@@ -32,6 +32,10 @@ impl Point {
         4
     }
 
+    pub fn is_empty(&self) -> bool {
+        false
+    }
+
     pub fn mul_f64(&self, rhs: f64) -> Self {
         mul_point_f64(self, rhs)
     }
@@ -74,8 +78,7 @@ pub struct Vector {
 }
 
 fn magnitude(v: &Vector) -> f64 {
-    // TODO Ought this not include `w`?
-    let sum_of_squares = v.x.powf(2.) + v.y.powf(2.) + v.z.powf(2.) + v.w.powf(2.);
+    let sum_of_squares = v.x.powf(2.) + v.y.powf(2.) + v.z.powf(2.);
     sum_of_squares.sqrt()
 }
 
@@ -111,9 +114,7 @@ impl Index<usize> for Vector {
             1 => &self.y,
             2 => &self.z,
             3 => &self.w,
-            _ => panic!("index out of bounds: the len is 4 but the index is {}",
-                ix
-            ),
+            _ => panic!("index out of bounds: the len is 4 but the index is {}", ix),
         }
     }
 }
@@ -126,9 +127,7 @@ impl IndexMut<usize> for Vector {
             1 => &mut self.y,
             2 => &mut self.z,
             3 => &mut self.w,
-            _ => panic!("index out of bounds: the len is 4 but the index is {}",
-                ix
-            ),
+            _ => panic!("index out of bounds: the len is 4 but the index is {}", ix),
         }
     }
 }
@@ -143,10 +142,7 @@ impl Index<usize> for Point {
             1 => &self.y,
             2 => &self.z,
             3 => &self.w,
-            _ => panic!(
-                "index out of bounds: the len is 4 but the index is {}",
-                ix
-            ),
+            _ => panic!("index out of bounds: the len is 4 but the index is {}", ix),
         }
     }
 }
@@ -159,16 +155,13 @@ impl IndexMut<usize> for Point {
             1 => &mut self.y,
             2 => &mut self.z,
             3 => &mut self.w,
-            _ => panic!(
-                "index out of bounds: the len is 4 but the index is {}",
-                ix
-            ),
+            _ => panic!("index out of bounds: the len is 4 but the index is {}", ix),
         }
     }
 }
 
 pub fn reflect(incidence: &Vector, normal: &Vector) -> Vector {
-    incidence.sub(&(normal.mul_f64(2.) * incidence.dot(&normal)))
+    incidence.sub(&(normal.mul_f64(2.) * incidence.dot(normal)))
 }
 
 #[allow(dead_code)]
@@ -204,6 +197,10 @@ impl Vector {
 
     pub fn len(&self) -> usize {
         4
+    }
+
+    pub fn is_empty(&self) -> bool {
+        false
     }
 
     pub fn sub(&self, rhs: &Self) -> Self {

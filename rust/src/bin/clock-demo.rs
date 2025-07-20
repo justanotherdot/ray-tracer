@@ -20,11 +20,19 @@ fn plot() -> Ppm {
             .rotate_y((i as f64) * slice_deg)
             .build();
         let p1 = t * p;
-        canvas.write_pixel(
-            (250. + p1.x) as usize,
-            (500. - (250. + p1.z)) as usize,
-            Color::new(0., 0., 0.),
-        );
+        let center_x = (250. + p1.x) as i32;
+        let center_y = (500. - (250. + p1.z)) as i32;
+
+        // Draw a 5x5 square for each hour mark
+        for dx in -2..=2 {
+            for dy in -2..=2 {
+                let x = center_x + dx;
+                let y = center_y + dy;
+                if x >= 0 && x < width as i32 && y >= 0 && y < height as i32 {
+                    canvas.write_pixel(x as usize, y as usize, Color::new(0., 0., 0.));
+                }
+            }
+        }
     });
 
     canvas.to_ppm()

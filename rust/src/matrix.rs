@@ -154,10 +154,10 @@ impl Matrix {
     pub fn inverse(&self) -> Self {
         assert!(self.is_invertible());
         let mut copy = Matrix::empty(self.dim(), self.dim());
-        let det = self.determinant() as f64;
+        let det = self.determinant();
         for row in 0..copy.dim() {
             for col in 0..copy.dim() {
-                copy[(col, row)] = self.cofactor(row, col) as f64 / det;
+                copy[(col, row)] = self.cofactor(row, col) / det;
             }
         }
         copy
@@ -758,7 +758,7 @@ mod test {
         ]);
 
         assert_eq!(m.determinant(), -2120.);
-        assert_eq!(m.is_invertible(), true);
+        assert!(m.is_invertible());
     }
 
     #[test]
@@ -772,7 +772,7 @@ mod test {
         ]);
 
         assert_eq!(m.determinant(), 0.);
-        assert_eq!(m.is_invertible(), false);
+        assert!(!m.is_invertible());
     }
 
     #[test]
