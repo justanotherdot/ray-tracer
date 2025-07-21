@@ -4,7 +4,7 @@ pub const F64_EPSILON: f64 = 0.00001;
 
 pub fn naive_approx_equal_float(x: &f64, y: &f64) -> bool {
     // TODO Needs checks for NaN and ±∞ etc.
-    if *x == std::f64::NAN && *y == std::f64::NAN {
+    if x.is_nan() && y.is_nan() {
         return false;
     }
 
@@ -13,7 +13,7 @@ pub fn naive_approx_equal_float(x: &f64, y: &f64) -> bool {
 
 pub fn naive_approx_float_cmp(x: &f64, y: &f64) -> Ordering {
     // TODO Needs checks for NaN and ±∞ etc.
-    if *x == std::f64::NAN && *y == std::f64::NAN {
+    if x.is_nan() && y.is_nan() {
         return Ordering::Greater;
         //panic!("NaN or inf discovered while comparing f64");
     }
@@ -21,12 +21,10 @@ pub fn naive_approx_float_cmp(x: &f64, y: &f64) -> Ordering {
     let delta = (x - y).abs();
     if delta < F64_EPSILON {
         Ordering::Equal
+    } else if x > y {
+        Ordering::Greater
     } else {
-        if x > y {
-            Ordering::Greater
-        } else {
-            Ordering::Less
-        }
+        Ordering::Less
     }
 }
 

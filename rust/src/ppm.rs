@@ -36,11 +36,10 @@ pub fn canvas_to_ppm(canvas: Canvas) -> Ppm {
     let pixel_rows = canvas.pixel_rows();
     let color_rows = pixel_rows.iter().map(|r| {
         r.iter()
-            .map(|c| {
+            .flat_map(|c| {
                 let (r, g, b) = clamp_color((*c).clone() * 255., 0., 255.);
                 vec![r, g, b]
             })
-            .flatten()
             .collect::<Vec<f64>>()
     });
 
@@ -49,25 +48,25 @@ pub fn canvas_to_ppm(canvas: Canvas) -> Ppm {
     color_rows.for_each(|row| {
         let mut row_iter = row.into_iter();
         if let Some(c1) = row_iter.next() {
-            let mut line = format!("{}", c1);
+            let mut line = format!("{c1}");
             for c2 in row_iter {
-                let s2 = format!("{}", c2);
+                let s2 = format!("{c2}");
                 if line.len() + 1 + s2.len() > 70 {
-                    line.push_str("\n");
+                    line.push('\n');
                     lines.push_str(&line);
                     line = s2;
                 } else {
-                    let chunk = format!(" {}", s2);
+                    let chunk = format!(" {s2}");
                     line.push_str(&chunk);
                 }
             }
             lines.push_str(&line);
-            lines.push_str("\n");
+            lines.push('\n');
         }
     });
 
     // PPM's are always terminated by a newline.
-    lines.push_str("\n");
+    lines.push('\n');
 
     Ppm(lines)
 }
@@ -83,7 +82,7 @@ mod test {
         let ppm = canvas_to_ppm(c);
         let blob = ppm.blob();
         let actual: Vec<&str> = blob.lines().collect();
-        let expected = vec!["P3", "5 3", "255"];
+        let expected = ["P3", "5 3", "255"];
         assert_eq!(actual[..3], expected[..]);
     }
 
@@ -94,7 +93,7 @@ mod test {
         let ppm = canvas_to_ppm(c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
-        let rhs = vec!["255 0 0"];
+        let rhs = ["255 0 0"];
         assert_eq!(lhs[3..4], rhs[..]);
     }
 
@@ -107,7 +106,7 @@ mod test {
         let ppm = canvas_to_ppm(c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
-        let rhs = vec!["255 0 0", "0 255 0", "0 0 255"];
+        let rhs = ["255 0 0", "0 255 0", "0 0 255"];
         assert_eq!(lhs[3..6], rhs[..]);
     }
 
@@ -120,7 +119,7 @@ mod test {
         let ppm = canvas_to_ppm(c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
-        let rhs = vec![
+        let rhs = [
             "255 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
             "0 0 0 0 0 0 0 128 0 0 0 0 0 0 0",
             "0 0 0 0 0 0 0 0 0 0 0 0 0 0 255",
@@ -135,7 +134,7 @@ mod test {
         let ppm = canvas_to_ppm(c);
         let blob = ppm.blob();
         let lhs: Vec<&str> = blob.lines().collect();
-        let rhs = vec![
+        let rhs = [
             "255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204",
             "153 255 204 153 255 204 153 255 204 153 255 204 153",
             "255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204",

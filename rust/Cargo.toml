@@ -5,10 +5,13 @@ authors = ["Ryan James Spencer <spencer.ryanjames@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-smallvec = "0.6.10"
-proptest = "0.9.6"
-criterion = "0.3"
-pprof = { version = "0.3", features = ["protobuf"] }
+proptest = "1.5"
+
+[dev-dependencies]
+criterion = "0.5"
+dhat = "0.3"
+# Remove pprof for now to avoid protobuf dependency issues
+# pprof = { version = "0.3", features = ["protobuf"] }
 # This is useful for ray intersections, but should be compared against smallvec
 #binary-heap-plus = "0.2.0"
 
@@ -24,5 +27,40 @@ debug = true
 lto = true
 
 [[bench]]
-name = "world_demo_bench"
+name = "world-demo-bench"
+path = "benches/world-demo-bench.rs"
 harness = false
+
+[[bench]]
+name = "simple-benchmark" 
+path = "benches/simple-benchmark.rs"
+harness = false
+
+[[bench]]
+name = "memory-benchmark"
+path = "benches/memory-benchmark.rs"
+harness = false
+
+[[bin]]
+name = "circle-demo"
+path = "src/bin/circle-demo.rs"
+
+[[bin]]
+name = "clock-demo"
+path = "src/bin/clock-demo.rs"
+
+[[bin]]
+name = "path-demo"
+path = "src/bin/path-demo.rs"
+
+[[bin]]
+name = "sphere-demo"
+path = "src/bin/sphere-demo.rs"
+
+[[bin]]
+name = "sphere-demo-compact"
+path = "src/bin/sphere-demo-compact.rs"
+
+[[bin]]
+name = "world-demo"
+path = "src/bin/world-demo.rs"

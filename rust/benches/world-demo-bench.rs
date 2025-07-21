@@ -69,12 +69,12 @@ fn produce_world() -> World {
     left.material.diffuse = 0.7;
     left.material.specular = 0.3;
 
-    w.objects.push(floor);
-    w.objects.push(left_wall);
-    w.objects.push(right_wall);
-    w.objects.push(middle);
-    w.objects.push(right);
-    w.objects.push(left);
+    w.add_object(floor);
+    w.add_object(left_wall);
+    w.add_object(right_wall);
+    w.add_object(middle);
+    w.add_object(right);
+    w.add_object(left);
 
     w.light = Some(PointLight::new(
         Point::new(-10., 10., -10.),
@@ -97,13 +97,13 @@ fn trace(width: usize, height: usize) -> Ppm {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("produce_world world-demo 30x15", |b| {
-        b.iter(|| black_box(produce_world()))
-    });
+    c.bench_function("produce_world", |b| b.iter(|| black_box(produce_world())));
 
-    c.bench_function("trace world-demo 30x15", |b| {
-        b.iter(|| black_box(trace(200, 100)))
-    });
+    c.bench_function("trace_200x100", |b| b.iter(|| black_box(trace(200, 100))));
+
+    c.bench_function("trace_100x75", |b| b.iter(|| black_box(trace(100, 75))));
+
+    c.bench_function("trace_50x50", |b| b.iter(|| black_box(trace(50, 50))));
 }
 
 criterion_group!(

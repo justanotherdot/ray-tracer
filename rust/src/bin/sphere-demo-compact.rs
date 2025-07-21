@@ -15,7 +15,7 @@ fn trace() -> Ppm {
     let mut w = World::new();
     let mut s = Sphere::new(0);
     s.material.color = Color::new(1., 0.2, 1.);
-    w.objects.push(s);
+    w.add_object(s);
 
     let light_position = Point::new(-10., 10., -10.);
     let light_color = Color::new(1., 1., 1.);

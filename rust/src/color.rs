@@ -115,5 +115,4 @@ mod test {
         let c2 = Color::new(0.9, 1., 0.1);
         assert_eq!(c1 * c2, Color::new(0.9, 0.2, 0.04));
     }
-
 }
